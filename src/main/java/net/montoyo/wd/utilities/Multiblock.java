@@ -97,22 +97,23 @@ public abstract class Multiblock {
         Vector3i pos = origin.clone();
         BlockPos.MutableBlockPos bp = new BlockPos.MutableBlockPos();
 
-        //Check inner
+        //Check inner - only verify that all blocks in the rectangle are screen blocks
+        //and that front/back are empty (no double-sided screens)
         for (int y = 0; y < size.y; y++) {
             for (int x = 0; x < size.x; x++) {
                 pos.toBlock(bp);
                 if (!(world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get()))
-                    return pos; //Hole
+                    return pos; //Hole in the screen
 
                 pos.add(side.forward);
                 pos.toBlock(bp);
                 if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
-                    return pos; //Back should be empty
+                    return pos; //Back should be empty (no double-sided screens)
 
                 pos.addMul(side.backward, 2);
                 pos.toBlock(bp);
                 if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
-                    return pos; //Front should be empty
+                    return pos; //Front should be empty (no double-sided screens)
 
                 pos.add(side.forward);
                 pos.add(side.right);
@@ -122,53 +123,8 @@ public abstract class Multiblock {
             pos.add(side.up);
         }
 
-        //Check left edge
-        pos.set(origin);
-        pos.add(side.left);
-
-        for (int y = 0; y < size.y; y++) {
-            pos.toBlock(bp);
-            if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
-                return pos; //Left edge should be empty
-
-            pos.add(side.up);
-        }
-
-        //Check right edge
-        pos.set(origin);
-        pos.addMul(side.right, size.x);
-
-        for (int y = 0; y < size.y; y++) {
-            pos.toBlock(bp);
-            if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
-                return pos; //Left edge should be empty
-
-            pos.add(side.up);
-        }
-
-        //Check bottom edge
-        pos.set(origin);
-        pos.add(side.down);
-
-        for (int x = 0; x < size.x; x++) {
-            pos.toBlock(bp);
-            if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
-                return pos; //Left edge should be empty
-
-            pos.add(side.right);
-        }
-
-        //Check top edge
-        pos.set(origin);
-        pos.addMul(side.up, size.y);
-
-        for (int x = 0; x < size.x; x++) {
-            pos.toBlock(bp);
-            if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
-                return pos; //Left edge should be empty
-
-            pos.add(side.right);
-        }
+        // Edge checks removed - allow screens to be adjacent to each other
+        // This enables non-rectangular shapes and multiple screens side-by-side
 
         //All good.
         return null;

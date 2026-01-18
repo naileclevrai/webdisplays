@@ -84,7 +84,13 @@ public class S2CMessageScreenUpdate extends Packet  {
         screenUpdate.control = new AutoVolumeControl(av);
         return screenUpdate;
     }
-    
+
+    public static S2CMessageScreenUpdate volume(ScreenBlockEntity screen, BlockSide side, float volume, boolean autoVolume) {
+        S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
+        screenUpdate.control = new VolumeControl(volume, autoVolume);
+        return screenUpdate;
+    }
+
     public static S2CMessageScreenUpdate owner(ScreenBlockEntity screen, BlockSide side, NameUUIDPair owner) {
         S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
         screenUpdate.control = new OwnerControl(owner);

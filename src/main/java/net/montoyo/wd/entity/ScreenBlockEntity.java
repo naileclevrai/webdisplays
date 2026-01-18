@@ -98,8 +98,7 @@ public class ScreenBlockEntity extends BlockEntity {
     public void unload() {
         for (ScreenData scr : screens) {
             if (scr.browser != null) {
-                scr.browser.close(true);
-                scr.browser = null;
+                scr.releaseBrowser(this);
             }
         }
         screens.clear();
@@ -118,8 +117,7 @@ public class ScreenBlockEntity extends BlockEntity {
         // very important to close these
         for (ScreenData screen : screens) {
             if (screen.browser != null) {
-                screen.browser.close(true);
-                screen.browser = null;
+                screen.releaseBrowser(this);
             }
         }
 
@@ -170,6 +168,8 @@ public class ScreenBlockEntity extends BlockEntity {
         ret.friendRights = ScreenRights.DEFAULTS;
         ret.otherRights = ScreenRights.DEFAULTS;
         ret.upgrades = new ArrayList<>();
+        ret.volume = (float) net.montoyo.wd.config.ClientConfig.AutoVolumeControl.defaultVolume;
+        ret.autoVolume = net.montoyo.wd.config.ClientConfig.AutoVolumeControl.enableAutoVolume;
 
         if (owner != null) {
             ret.owner = new NameUUIDPair(owner.getGameProfile());
@@ -240,8 +240,7 @@ public class ScreenBlockEntity extends BlockEntity {
         // very important that these get closed
         for (ScreenData screen : screens)
             if (screen.browser != null) {
-                screen.browser.close(true);
-                screen.browser = null;
+                screen.releaseBrowser(this);
             }
         screens.clear();
 
@@ -302,8 +301,7 @@ public class ScreenBlockEntity extends BlockEntity {
 
         if (level.isClientSide) {
             if (screens.get(idx).browser != null) {
-                screens.get(idx).browser.close(true);
-                screens.get(idx).browser = null;
+                screens.get(idx).releaseBrowser(this);
             }
         } else
             WDNetworkRegistry.INSTANCE.send(PacketDistributor.NEAR.with(() -> point(level, getBlockPos())), new S2CMessageScreenUpdate(this.getBlockPos(), side)); //Delete the screen
@@ -337,8 +335,7 @@ public class ScreenBlockEntity extends BlockEntity {
             WebDisplays.PROXY.screenUpdateResolutionInGui(new Vector3i(getBlockPos()), side, res);
 
             if (scr.browser != null) {
-                scr.browser.close(true);
-                scr.browser = null; //Will be re-created by renderer
+                scr.releaseBrowser(this); //Will be re-created by renderer
             }
         } else {
             WDNetworkRegistry.INSTANCE.send(PacketDistributor.NEAR.with(() -> point(level, getBlockPos())), S2CMessageScreenUpdate.setResolution(this, side, res));
@@ -524,8 +521,7 @@ public class ScreenBlockEntity extends BlockEntity {
 
             for (ScreenData scr : screens) {
                 if (scr.browser != null) {
-                    scr.browser.close(true);
-                    scr.browser = null;
+                    scr.releaseBrowser(this);
                 }
             }
         }
@@ -580,7 +576,11 @@ public class ScreenBlockEntity extends BlockEntity {
     @Override
     @Nonnull
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
-        return renderBB;
+        // Expand the bounding box to force Minecraft to render the screen at greater distances
+        // Minecraft culls BlockEntities based on their bounding box size
+        // We expand it by the configured load distance to ensure rendering at the desired range
+        double expandBy = Math.sqrt(net.montoyo.wd.WebDisplays.INSTANCE.loadDistance2);
+        return renderBB.inflate(expandBy);
     }
 
 //	//FIXME: Not called if enableSoundDistance is false
@@ -995,7 +995,7 @@ public class ScreenBlockEntity extends BlockEntity {
 
         remove.upgrades.clear();
         if (remove.browser != null)
-            remove.browser.close(true);
+            remove.releaseBrowser(this);
         screens.remove(remove);
     }
 
@@ -1036,8 +1036,7 @@ public class ScreenBlockEntity extends BlockEntity {
             WebDisplays.PROXY.screenUpdateRotationInGui(new Vector3i(getBlockPos()), side, rot);
 
             if (scr.browser != null && oldWasVertical != rot.isVertical) {
-                scr.browser.close(true);
-                scr.browser = null; //Will be re-created by renderer
+                scr.releaseBrowser(this); //Will be re-created by renderer
             }
         } else {
             scr.rotation = rot;
@@ -1080,8 +1079,7 @@ public class ScreenBlockEntity extends BlockEntity {
     public void deactivate() {
         for (ScreenData screen : screens) {
             if (screen.browser != null) {
-                screen.browser.close(true);
-                screen.browser = null;
+                screen.releaseBrowser(this);
             }
         }
     }

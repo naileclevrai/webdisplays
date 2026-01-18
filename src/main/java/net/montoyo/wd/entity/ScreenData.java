@@ -46,6 +46,7 @@ public class ScreenData {
     public final Vector2i lastMousePos = new Vector2i();
     public NibbleArray redstoneStatus; //null on client
     public boolean autoVolume = true;
+    public float volume = 100.0f; // Volume percentage (0-100)
 
     public int mouseType;
 
@@ -95,6 +96,11 @@ public class ScreenData {
         if (tag.contains("AutoVolume"))
             ret.autoVolume = tag.getBoolean("AutoVolume");
 
+        if (tag.contains("Volume"))
+            ret.volume = tag.getFloat("Volume");
+        else
+            ret.volume = 100.0f; // Default volume
+
         return ret;
     }
 
@@ -134,6 +140,7 @@ public class ScreenData {
 
         tag.put("Upgrades", list);
         tag.putBoolean("AutoVolume", autoVolume);
+        tag.putFloat("Volume", volume);
         return tag;
     }
 
@@ -187,7 +194,12 @@ public class ScreenData {
 
     public void createBrowser(ScreenBlockEntity be, boolean doAnim) {
         if (WebDisplays.PROXY instanceof ClientProxy) {
-            browser = WDBrowser.createBrowser(WebDisplays.applyBlacklist(url != null ? url : "https://www.google.com"), false);
+            String finalUrl = WebDisplays.applyBlacklist(url != null ? url : "https://www.google.com");
+
+            // Use browser pooling - screens can share browsers if they display the same URL
+            // Create a unique identifier for this screen
+            Object screenId = be.getBlockPos().toString() + "_" + side.toString();
+            browser = WDBrowser.createBrowserFromPool(finalUrl, false, true, screenId);
 
             // set screen
             if (browser instanceof MCEFBrowser mcefBrowser) {
@@ -204,8 +216,24 @@ public class ScreenData {
                 InWorldQueries.attach(be, side, wdBrowser);
             }
 
+            // Initialize browser-side volume control for OS playback path
+            net.montoyo.wd.client.audio.BrowserVolumeManager.initializeBrowser(browser);
+            net.montoyo.wd.client.audio.BrowserVolumeManager.updateBrowserVolume(browser, this, be);
+
             doTurnOnAnim = doAnim;
             turnOnTime = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * Release the browser back to the pool when the screen is destroyed or unloaded.
+     * @param be The screen block entity
+     */
+    public void releaseBrowser(ScreenBlockEntity be) {
+        if (browser != null && WebDisplays.PROXY instanceof ClientProxy) {
+            Object screenId = be.getBlockPos().toString() + "_" + side.toString();
+            WDBrowser.releaseBrowser(browser, screenId);
+            browser = null;
         }
     }
 }

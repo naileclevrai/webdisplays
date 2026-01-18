@@ -121,6 +121,12 @@ public class GuiScreenConfig extends WDScreen {
     @FillControl
     private CheckBox cbAutoVolume;
 
+    @FillControl
+    private TextField tfVolume;
+
+    @FillControl
+    private Button btnSetVolume;
+
     private CheckBox[] friendBoxes;
     private CheckBox[] otherBoxes;
 
@@ -164,6 +170,7 @@ public class GuiScreenConfig extends WDScreen {
             //Hopefully upgrades have been synchronized...
             ugUpgrades.setUpgrades(scr.upgrades);
             cbAutoVolume.setChecked(scr.autoVolume);
+            tfVolume.setText(String.valueOf((int) scr.volume));
         }
 
         if(owner == null)
@@ -217,6 +224,28 @@ public class GuiScreenConfig extends WDScreen {
         btnSetRes.setDisabled(true);
     }
 
+    private void clickSetVolume() {
+        ScreenData scr = tes.getScreen(side);
+        if(scr == null)
+            return;
+
+        try {
+            float volume = Float.parseFloat(tfVolume.getText());
+            volume = Math.max(0, Math.min(100, volume));
+
+            if(volume != scr.volume) {
+                WDNetworkRegistry.INSTANCE.sendToServer(new C2SMessageScreenCtrl(
+                    tes,
+                    side,
+                    new net.montoyo.wd.controls.builtin.VolumeControl(volume, scr.autoVolume)
+                ));
+            }
+        } catch(NumberFormatException ex) {
+            // Roll back
+            tfVolume.setText(String.valueOf((int) scr.volume));
+        }
+    }
+
     @GuiSubscribe
     public void onClick(Button.ClickEvent ev) {
         if(ev.getSource() == btnAdd && !waitingAC)
@@ -227,6 +256,8 @@ public class GuiScreenConfig extends WDScreen {
             Rotation[] rots = Rotation.values();
             WDNetworkRegistry.INSTANCE.sendToServer(new C2SMessageScreenCtrl(tes, side, rots[(rotation.ordinal() + 1) % rots.length]));
         }
+        else if(ev.getSource() == btnSetVolume)
+            clickSetVolume();
     }
 
     @GuiSubscribe
@@ -235,6 +266,8 @@ public class GuiScreenConfig extends WDScreen {
             addFriend(ev.getText().trim());
         else if((ev.getSource() == tfResX || ev.getSource() == tfResY) && !btnSetRes.isDisabled())
             clickSetRes();
+        else if(ev.getSource() == tfVolume)
+            clickSetVolume();
     }
 
     @GuiSubscribe
@@ -257,7 +290,7 @@ public class GuiScreenConfig extends WDScreen {
 
     @GuiSubscribe
     public void onTextChanged(TextField.TextChangedEvent ev) {
-        if(ev.getSource() == tfResX || ev.getSource() == tfResY) {
+        if(ev.getSource() == tfResX || ev.getSource() == tfResY || ev.getSource() == tfVolume) {
             for(int i = 0; i < ev.getNewContent().length(); i++) {
                 if(!Character.isDigit(ev.getNewContent().charAt(i))) {
                     ev.getSource().setText(ev.getOldContent());
@@ -265,23 +298,25 @@ public class GuiScreenConfig extends WDScreen {
                 }
             }
 
-            if(cbLockRatio.isChecked()) {
-                if(ev.getSource() == tfResX) {
-                    try {
-                        float val = (float) Integer.parseInt(ev.getNewContent());
-                        val /= aspectRatio;
-                        tfResY.setText("" + ((int) val));
-                    } catch(NumberFormatException ex) {}
-                } else {
-                    try {
-                        float val = (float) Integer.parseInt(ev.getNewContent());
-                        val *= aspectRatio;
-                        tfResX.setText("" + ((int) val));
-                    } catch(NumberFormatException ex) {}
+            if(ev.getSource() == tfResX || ev.getSource() == tfResY) {
+                if(cbLockRatio.isChecked()) {
+                    if(ev.getSource() == tfResX) {
+                        try {
+                            float val = (float) Integer.parseInt(ev.getNewContent());
+                            val /= aspectRatio;
+                            tfResY.setText("" + ((int) val));
+                        } catch(NumberFormatException ex) {}
+                    } else {
+                        try {
+                            float val = (float) Integer.parseInt(ev.getNewContent());
+                            val *= aspectRatio;
+                            tfResX.setText("" + ((int) val));
+                        } catch(NumberFormatException ex) {}
+                    }
                 }
-            }
 
-            btnSetRes.setDisabled(false);
+                btnSetRes.setDisabled(false);
+            }
         }
     }
 
@@ -472,6 +507,8 @@ public class GuiScreenConfig extends WDScreen {
         flag = (myRights & ScreenRights.MANAGE_UPGRADES) == 0;
         ugUpgrades.setDisabled(flag);
         cbAutoVolume.setDisabled(flag);
+        tfVolume.setDisabled(flag);
+        btnSetVolume.setDisabled(flag);
     }
 
     public void updateResolution(Vector2i res) {

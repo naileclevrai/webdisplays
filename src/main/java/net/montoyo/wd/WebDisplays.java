@@ -32,12 +32,15 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.client.ConfigScreenHandler;
 import net.montoyo.wd.client.ClientProxy;
+import net.montoyo.wd.client.gui.WebDisplaysConfigScreen;
 import net.montoyo.wd.client.gui.camera.KeyboardCamera;
 import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.config.CommonConfig;
@@ -110,7 +113,7 @@ public class WebDisplays {
         } else {
             PROXY = new SharedProxy();
         }
-    
+
         if (FMLEnvironment.dist.isClient()) {
             // proxies are annoying, so from now on, I'mma be just registering stuff in here
             FMLJavaModLoadingContext.get().getModEventBus().addListener(ClientProxy::onKeybindRegistry);
@@ -118,6 +121,8 @@ public class WebDisplays {
             MinecraftForge.EVENT_BUS.addListener(KeyboardCamera::updateCamera);
             MinecraftForge.EVENT_BUS.addListener(KeyboardCamera::gameTick);
             ClientConfig.init();
+            ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
+                    () -> new ConfigScreenHandler.ConfigScreenFactory((mc, screen) -> new WebDisplaysConfigScreen(screen)));
         }
         
         CommonConfig.init();
@@ -393,8 +398,19 @@ public class WebDisplays {
     }
 
     private static void registerTrigger(Criterion ... criteria) {
-        for(Criterion c: criteria)
-            CriteriaTriggers.register(c);
+        for (Criterion c : criteria)
+            registerCriterionCompat(c);
+    }
+
+    private static void registerCriterionCompat(Criterion criterion) {
+        try {
+            java.lang.reflect.Method m = CriteriaTriggers.class.getMethod("register", net.minecraft.advancements.CriterionTrigger.class);
+            m.invoke(null, criterion);
+        } catch (NoSuchMethodException ex) {
+            Log.error("CriteriaTriggers.register(CriterionTrigger) not found; skipping %s", criterion.getId().toString());
+        } catch (Throwable t) {
+            Log.warningEx("Failed to register criterion %s", t, criterion.getId().toString());
+        }
     }
 
    // public static boolean isOpenComputersAvailable() {
@@ -420,4 +436,3 @@ public class WebDisplays {
         return isSiteBlacklisted(url) ? BLACKLIST_URL : url;
     }
 }
-

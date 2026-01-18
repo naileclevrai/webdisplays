@@ -13,9 +13,12 @@ import net.minecraftforge.fml.common.Mod;
 import net.montoyo.wd.WebDisplays;
 import net.montoyo.wd.client.ClientProxy;
 import net.montoyo.wd.client.gui.controls.Button;
+import net.montoyo.wd.client.gui.controls.CheckBox;
 import net.montoyo.wd.client.gui.controls.TextField;
 import net.montoyo.wd.client.gui.loading.FillControl;
+import net.montoyo.wd.controls.builtin.VolumeControl;
 import net.montoyo.wd.entity.ScreenBlockEntity;
+import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.item.ItemMinePad2;
 import net.montoyo.wd.net.WDNetworkRegistry;
 import net.montoyo.wd.net.server_bound.C2SMessageMinepadUrl;
@@ -45,13 +48,19 @@ public class GuiSetURL2 extends WDScreen {
 	
 	@FillControl
 	private TextField tfURL;
-	
+
+	@FillControl
+	private TextField tfVolume;
+
+	@FillControl
+	private CheckBox cbAutoVolume;
+
 	@FillControl
 	private Button btnShutDown;
-	
+
 	@FillControl
 	private Button btnCancel;
-	
+
 	@FillControl
 	private Button btnOk;
 	
@@ -76,6 +85,15 @@ public class GuiSetURL2 extends WDScreen {
 		super.init();
 		loadFrom(new ResourceLocation("webdisplays", "gui/seturl.json"));
 		tfURL.setText(screenURL);
+
+		// Initialize volume controls for screens (not pads)
+		if (!isPad && tileEntity != null) {
+			ScreenData screen = tileEntity.getScreen(screenSide);
+			if (screen != null) {
+				tfVolume.setText(String.valueOf((int) screen.volume));
+				cbAutoVolume.setChecked(screen.autoVolume);
+			}
+		}
 	}
 	
 	@Override
@@ -118,30 +136,59 @@ public class GuiSetURL2 extends WDScreen {
 	
 	private void validate(String url) {
 		if (!url.isEmpty()) {
-			
+
 			try {
 				ScreenBlockEntity.url(url);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
-			
+
 			url = Util.addProtocol(url);
 //			url = ((ClientProxy) WebDisplays.PROXY).getMCEF().punycode(url);
-			
+
 			if (isPad) {
 				UUID uuid = getUUID();
 				WDNetworkRegistry.INSTANCE.sendToServer(new C2SMessageMinepadUrl(uuid, url));
 				stack.getTag().putString("PadURL", url);
-				
+
 				ClientProxy.PadData pd = ((ClientProxy) WebDisplays.PROXY).getPadByID(uuid);
-				
+
 				if (pd != null && pd.view != null) {
 					pd.view.loadURL(WebDisplays.applyBlacklist(url));
 				}
-			} else
-				WDNetworkRegistry.INSTANCE.sendToServer(C2SMessageScreenCtrl.setURL(tileEntity, screenSide, url, remoteLocation));
+			} else {
+				// Only send URL if it changed
+				if (!url.equals(screenURL)) {
+					WDNetworkRegistry.INSTANCE.sendToServer(C2SMessageScreenCtrl.setURL(tileEntity, screenSide, url, remoteLocation));
+				}
+
+				// Send volume settings for screens
+				ScreenData screen = tileEntity.getScreen(screenSide);
+				if (screen != null) {
+					float volume = 100.0f;
+					boolean autoVolume = true;
+
+					try {
+						volume = Float.parseFloat(tfVolume.getText());
+						volume = Math.max(0, Math.min(100, volume));
+					} catch (NumberFormatException e) {
+						// Keep default value
+					}
+
+					autoVolume = cbAutoVolume.isChecked();
+
+					// Only send volume if it changed
+					if (volume != screen.volume || autoVolume != screen.autoVolume) {
+						WDNetworkRegistry.INSTANCE.sendToServer(new C2SMessageScreenCtrl(
+							tileEntity,
+							screenSide,
+							new VolumeControl(volume, autoVolume)
+						));
+					}
+				}
+			}
 		}
-		
+
 		minecraft.setScreen(null);
 	}
 	

@@ -45,5 +45,6 @@ public class AutoVolumeControl extends ScreenControl {
 	@OnlyIn(Dist.CLIENT)
 	public void handleClient(BlockPos pos, BlockSide side, ScreenBlockEntity tes, NetworkEvent.Context ctx) {
 		tes.setAutoVolume(side, autoVol);
+		// Volume is now handled by WebDisplaysAudioHandler
 	}
 }

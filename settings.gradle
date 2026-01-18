@@ -1,26 +1,28 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        maven { url = 'https://maven.minecraftforge.net' }
         maven {
             name = 'NeoForged'
             url = 'https://maven.neoforged.net/releases'
         }
+        maven { url = 'https://repo.spongepowered.org/maven' }
         maven { url = 'https://maven.parchmentmc.org' } // Add this line
     }
-//    resolutionStrategy {
-//        eachPlugin {
-//            switch (requested.id.toString()) {
-//                case "net.minecraftforge.gradle": {
-//                    useModule("${requested.id}:ForgeGradle:${requested.version}")
-//                    break
-//                }
-//                case "org.spongepowered.mixin": {
-//                    useModule("org.spongepowered:mixingradle:${requested.version}")
-//                    break;
-//                }
-//            }
-//        }
-//    }
+    resolutionStrategy {
+        eachPlugin {
+            switch (requested.id.toString()) {
+                case "net.minecraftforge.gradle": {
+                    useModule("${requested.id}:ForgeGradle:${requested.version}")
+                    break
+                }
+                case "org.spongepowered.mixin": {
+                    useModule("org.spongepowered:mixingradle:${requested.version}")
+                    break;
+                }
+            }
+        }
+    }
 }
 
 plugins {

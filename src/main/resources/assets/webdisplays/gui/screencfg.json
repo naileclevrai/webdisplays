@@ -208,6 +208,34 @@
       "y": 150,
       "label": "$webdisplays.gui.screencfg.autovol",
       "tooltip": "$webdisplays.gui.screencfg.avwarning"
+    },
+    {
+      "type": "Label",
+      "x": 258,
+      "y": 168,
+      "label": "$webdisplays.gui.screencfg.volume"
+    },
+    {
+      "type": "TextField",
+      "name": "tfVolume",
+      "x": 260,
+      "y": 180,
+      "width": 40,
+      "maxLength": 3
+    },
+    {
+      "type": "Label",
+      "x": 302,
+      "y": 180,
+      "label": "%"
+    },
+    {
+      "type": "Button",
+      "name": "btnSetVolume",
+      "x": 260,
+      "y": 204,
+      "width": 84,
+      "label": "$webdisplays.gui.screencfg.setvol"
     }
   ],
   "center": true

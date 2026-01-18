@@ -61,6 +61,7 @@ import net.minecraftforge.network.NetworkEvent;
 import net.montoyo.wd.SharedProxy;
 import net.montoyo.wd.WebDisplays;
 import net.montoyo.wd.block.ScreenBlock;
+import net.montoyo.wd.client.ambilight.AmbilightController;
 import net.montoyo.wd.client.gui.*;
 import net.montoyo.wd.client.gui.loading.GuiLoader;
 import net.montoyo.wd.client.renderers.*;
@@ -252,6 +253,7 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 	private final HashMap<UUID, PadData> padMap = new HashMap<>();
 	private final ArrayList<PadData> padList = new ArrayList<>();
 	private int minePadTickCounter = 0;
+	private final AmbilightController ambilightController = new AmbilightController();
 	
 	/**************************************** INHERITED METHODS ****************************************/
 	@SubscribeEvent
@@ -288,6 +290,9 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 
 		MCEF.getClient().addDisplayHandler(DisplayHandler.INSTANCE);
 		MCEF.getClient().getHandle().addMessageRouter(CefMessageRouter.create(WDRouter.INSTANCE));
+
+		// Register audio handler for volume control and 3D positional audio
+		MCEF.getClient().addAudioHandler(new net.montoyo.wd.client.audio.WebDisplaysAudioHandler());
 
 		findAdvancementToProgressField();
 	}
@@ -607,8 +612,7 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 				if (tes.isLoaded()) {
 					if (dist > WebDisplays.INSTANCE.unloadDistance2 * 16)
 						tes.deactivate();
-//					else if (ClientConfig.AutoVolumeControl.enableAutoVolume)
-//						tes.updateTrackDistance(dist, 80); //ToDo find master volume
+					// Volume is now handled by WebDisplaysAudioHandler
 				} else if (dist <= WebDisplays.INSTANCE.loadDistance2 * 16)
 					tes.activate();
 			}
@@ -618,12 +622,16 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 	@SubscribeEvent
 	public void onTick(TickEvent.ClientTickEvent ev) {
 		if (ev.phase != TickEvent.Phase.END) return;
-		
+
+		// Update browser volumes for OS playback path
+		net.montoyo.wd.client.audio.BrowserVolumeManager.updateAllBrowserVolumes();
+		ambilightController.tick(screenTracking);
+
 		//Help
 		if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_F1)) {
 			if (!isF1Down) {
 				isF1Down = true;
-				
+
 				String wikiName = null;
 				if (mc.screen instanceof WDScreen)
 					wikiName = ((WDScreen) mc.screen).getWikiPageName();
@@ -725,6 +733,7 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 	@SubscribeEvent
 	public void onWorldUnload(LevelEvent.Unload ev) {
 		Log.info("World unloaded; killing screens...");
+		ambilightController.clear();
 		if (ev.getLevel() instanceof Level level) {
 			ResourceLocation dim = level.dimension().location();
 			for (int i = screenTracking.size() - 1; i >= 0; i--) {

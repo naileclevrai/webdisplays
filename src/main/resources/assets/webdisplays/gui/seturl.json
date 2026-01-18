@@ -23,11 +23,42 @@
       "urlField": "tfURL"
     },
     {
+      "type": "Label",
+      "label": "$webdisplays.gui.seturl.volume",
+      "x": 0,
+      "y": 38,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "TextField",
+      "name": "tfVolume",
+      "x": 50,
+      "y": 38,
+      "width": 40,
+      "maxLength": 3,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Label",
+      "label": "%",
+      "x": 92,
+      "y": 38,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "CheckBox",
+      "name": "cbAutoVolume",
+      "label": "$webdisplays.gui.seturl.autovolume",
+      "x": 110,
+      "y": 38,
+      "visible": "1 - isPad"
+    },
+    {
       "type": "Button",
       "name": "btnShutDown",
       "label": "$webdisplays.gui.seturl.shutdown",
       "x": 0,
-      "y": 38,
+      "y": "isPad & 38 | 64",
       "width": 96,
       "visible": "isPad",
       "disabled": "1 - isPad"
@@ -37,7 +68,7 @@
       "name": "btnCancel",
       "label": "$webdisplays.gui.seturl.cancel",
       "x": "isPad & 100 | 0",
-      "y": 38,
+      "y": "isPad & 38 | 64",
       "width": "isPad & 96 | 146"
     },
     {
@@ -45,7 +76,7 @@
       "name": "btnOk",
       "label": "$webdisplays.gui.seturl.ok",
       "x": "isPad & 200 | 150",
-      "y": 38,
+      "y": "isPad & 38 | 64",
       "width": "isPad & 96 | 146"
     }
   ],

@@ -1,5 +1,6 @@
 package net.montoyo.wd.client.audio;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.AudioStream;
@@ -10,6 +11,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.SampledFloat;
+import net.montoyo.wd.WebDisplays;
+import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
 import org.jetbrains.annotations.Nullable;
@@ -86,7 +89,37 @@ public class WDAudioSource implements SoundInstance {
 
     @Override
     public float getVolume() {
-        return blockEntity.ytVolume;
+        if (!data.autoVolume) {
+            // Use fixed volume from screen settings
+            return data.volume / 100.0f;
+        }
+
+        // Calculate distance-based volume
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            return data.volume / 100.0f;
+        }
+
+        double dx = mc.player.getX() - (blockEntity.getBlockPos().getX() + 0.5);
+        double dy = mc.player.getY() - (blockEntity.getBlockPos().getY() + 0.5);
+        double dz = mc.player.getZ() - (blockEntity.getBlockPos().getZ() + 0.5);
+        float distance = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        float baseVolume = data.volume / 100.0f;
+        float minDist = WebDisplays.INSTANCE.avDist100;
+        float maxDist = WebDisplays.INSTANCE.avDist0;
+
+        if (distance <= minDist) {
+            // Full volume within minimum distance
+            return baseVolume;
+        } else if (distance >= maxDist) {
+            // Silent beyond maximum distance
+            return 0.0f;
+        } else {
+            // Linear interpolation between min and max distance
+            float attenuation = 1.0f - ((distance - minDist) / (maxDist - minDist));
+            return baseVolume * attenuation;
+        }
     }
 
     @Override

@@ -84,6 +84,8 @@
     "webdisplays.linker.posInfo": "Pos. écran : %d %d %d",
     "webdisplays.linker.sideInfo": "Côté : %s",
     "webdisplays.gui.seturl.url": "URL:",
+    "webdisplays.gui.seturl.volume": "Volume:",
+    "webdisplays.gui.seturl.autovolume": "Volume Auto",
     "webdisplays.gui.seturl.ok": "OK",
     "webdisplays.gui.seturl.cancel": "Annuler",
     "webdisplays.gui.seturl.shutdown": "Eteindre",

@@ -12,7 +12,9 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.world.phys.Vec3;
 import net.montoyo.wd.WebDisplays;
+import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.utilities.math.Vector3f;
@@ -24,17 +26,31 @@ import static com.mojang.math.Axis.*;
 public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 	public ScreenRenderer() {
 	}
-	
+
 	public static class ScreenRendererProvider implements BlockEntityRendererProvider<ScreenBlockEntity> {
 		@Override
 		public @NotNull BlockEntityRenderer<ScreenBlockEntity> create(@NotNull Context arg) {
 			return new ScreenRenderer();
 		}
 	}
-	
+
 	private final Vector3f mid = new Vector3f();
 	private final Vector3i tmpi = new Vector3i();
 	private final Vector3f tmpf = new Vector3f();
+
+	@Override
+	public boolean shouldRenderOffScreen(ScreenBlockEntity pBlockEntity) {
+		// Force rendering even when the block entity is off-screen
+		// This is necessary for large render distances
+		return true;
+	}
+
+	@Override
+	public int getViewDistance() {
+		// Return a large view distance to ensure screens render far away
+		// This is based on the configured load distance
+		return (int) Math.sqrt(WebDisplays.INSTANCE.loadDistance2) + 64;
+	}
 	
 	@Override
 	public void render(ScreenBlockEntity te, float partialTick, @NotNull PoseStack poseStack, @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
@@ -67,6 +83,20 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 			mid.addMul(tmpf, 0.5f);
 			tmpf.set(scr.side.down);
 			mid.addMul(tmpf, 0.5f);
+
+			double offsetPixels = ClientConfig.ScreenOffset.pixels;
+			double offsetDistance = ClientConfig.ScreenOffset.distance;
+			if (offsetPixels > 0.0) {
+				Vec3 camPos = Minecraft.getInstance().getEntityRenderDispatcher().camera.getPosition();
+				double centerX = te.getBlockPos().getX() + mid.x;
+				double centerY = te.getBlockPos().getY() + mid.y;
+				double centerZ = te.getBlockPos().getZ() + mid.z;
+				double dist2 = camPos.distanceToSqr(centerX, centerY, centerZ);
+				if (offsetDistance <= 0.0 || dist2 >= offsetDistance * offsetDistance) {
+					tmpf.set(scr.side.forward);
+					mid.addMul(tmpf, (float) (offsetPixels / 16.0));
+				}
+			}
 			
 			poseStack.pushPose();
 			poseStack.translate(mid.x, mid.y, mid.z);
