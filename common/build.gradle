@@ -1,0 +1,17 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(java_version as int)
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = maven_group
+            artifactId = archives_base_name
+            version = mod_version
+        }
+    }
+}

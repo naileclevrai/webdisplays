@@ -1,5 +1,6 @@
 # WebDisplays
 WebDisplays is a mod for creating and interacting with web browsers in Minecraft. You can create screens in your world and browse the internet.
+This is a multiloader build (Forge/Fabric).
 
 WebDisplays was originally written by montoyo. It is currently maintained by CinemaMod Group.
 
