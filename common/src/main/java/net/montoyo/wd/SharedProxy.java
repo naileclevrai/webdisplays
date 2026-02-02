@@ -59,10 +59,7 @@ public class SharedProxy {
     }
 
     public void enqueue(Runnable r) {
-        MinecraftServer server = getServer();
-        if (server != null) {
-            server.execute(r);
-        }
+        ServerLifecycleHooks.getCurrentServer().execute(r);
     }
 
     public void displayGui(GuiData data) {

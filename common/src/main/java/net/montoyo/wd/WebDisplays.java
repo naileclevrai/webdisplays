@@ -108,13 +108,13 @@ public class WebDisplays {
 
     public WebDisplays() {
         INSTANCE = this;
-        if (FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT) {
+        if (FMLEnvironment.dist.isClient()) {
             PROXY = DistSafety.createProxy();
         } else {
             PROXY = new SharedProxy();
         }
 
-        if (FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT) {
+        if (FMLEnvironment.dist.isClient()) {
             // proxies are annoying, so from now on, I'mma be just registering stuff in here
             FMLJavaModLoadingContext.get().getModEventBus().addListener(ClientProxy::onKeybindRegistry);
             MinecraftForge.EVENT_BUS.addListener(ClientProxy::onDrawSelection);

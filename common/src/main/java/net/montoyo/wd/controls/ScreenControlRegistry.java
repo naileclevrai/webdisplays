@@ -29,7 +29,7 @@ public class ScreenControlRegistry {
 		// lil thing for sanity
 		// avoids the pain the dist cleaner causes, hopefully
 		if (!FMLEnvironment.production) {
-			if (FMLEnvironment.dist == Dist.CLIENT) {
+			if (FMLEnvironment.dist.isClient()) {
 				boolean shouldThrow = false;
 				try {
 					Method m = type.clazz.getMethod("handleClient", BlockPos.class, BlockSide.class, ScreenBlockEntity.class, NetworkEvent.Context.class);
