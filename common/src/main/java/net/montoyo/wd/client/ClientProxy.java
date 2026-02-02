@@ -30,6 +30,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.HumanoidArm;
@@ -72,6 +73,11 @@ import net.montoyo.wd.core.HasAdvancement;
 import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.config.CommonConfig;
 import net.montoyo.wd.data.GuiData;
+import net.montoyo.wd.data.KeyboardData;
+import net.montoyo.wd.data.RedstoneCtrlData;
+import net.montoyo.wd.data.ScreenConfigData;
+import net.montoyo.wd.data.ServerData;
+import net.montoyo.wd.data.SetURLData;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.item.ItemLaserPointer;
@@ -304,6 +310,11 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 		mc = Minecraft.getInstance();
 		MinecraftForge.EVENT_BUS.register(this);
 	}
+
+	@Override
+	public void init() {
+		MCEF.scheduleForInit((cef) -> onCefInit());
+	}
 	
 	@Override
 	public void onCefInit() {
@@ -355,7 +366,46 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 	
 	@Override
 	public void displayGui(GuiData data) {
-		Screen gui = data.createGui(mc.screen, mc.level);
+		if (mc.level == null)
+			return;
+
+		Screen gui = null;
+
+		if (data instanceof KeyboardData kd) {
+			BlockEntity te = mc.level.getBlockEntity(kd.pos.toBlock());
+			if (te instanceof ScreenBlockEntity sbe)
+				gui = new GuiKeyboard(sbe, kd.side, new BlockPos(kd.kbX, kd.kbY, kd.kbZ));
+			else
+				Log.error("TileEntity at %s is not a screen; can't open keyboard!", kd.pos.toString());
+		} else if (data instanceof SetURLData sud) {
+			BlockEntity te = mc.level.getBlockEntity(sud.pos.toBlock());
+			if (te instanceof ScreenBlockEntity sbe)
+				gui = new GuiSetURL2(sbe, sud.side, sud.url, sud.isRemote ? sud.remoteLocation : null);
+			else
+				Log.error("TileEntity at %s is not a screen; can't open gui!", sud.pos.toString());
+		} else if (data instanceof ScreenConfigData scd) {
+			if (mc.screen instanceof GuiScreenConfig gsc && gsc.isForBlock(scd.pos.toBlock(), scd.side)) {
+				gsc.updateFriends(scd.friends);
+				gsc.updateFriendRights(scd.friendRights);
+				gsc.updateOtherRights(scd.otherRights);
+				gsc.updateMyRights();
+				return;
+			}
+
+			if (scd.onlyUpdate)
+				return;
+
+			BlockEntity te = mc.level.getBlockEntity(scd.pos.toBlock());
+			if (te instanceof ScreenBlockEntity sbe)
+				gui = new GuiScreenConfig(Component.nullToEmpty(""), sbe, scd.side, scd.friends, scd.friendRights, scd.otherRights);
+			else
+				Log.error("TileEntity at %s is not a screen; can't open gui!", scd.pos.toString());
+		} else if (data instanceof RedstoneCtrlData rcd) {
+			gui = new GuiRedstoneCtrl(mc.screen != null ? mc.screen.getTitle() : Component.nullToEmpty(""), rcd.dimension, rcd.pos, rcd.risingEdgeURL, rcd.fallingEdgeURL);
+		} else if (data instanceof ServerData sd) {
+			gui = new GuiServer(sd.pos, sd.owner);
+		}
+
 		if (gui != null)
 			mc.setScreen(gui);
 	}

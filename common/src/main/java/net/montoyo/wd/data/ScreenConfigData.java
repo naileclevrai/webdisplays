@@ -4,22 +4,13 @@
 
 package net.montoyo.wd.data;
 
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.network.PacketDistributor;
-import net.montoyo.wd.client.gui.GuiScreenConfig;
 import net.montoyo.wd.entity.ScreenData;
-import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.net.BufferUtils;
 import net.montoyo.wd.net.WDNetworkRegistry;
 import net.montoyo.wd.net.client_bound.S2CMessageOpenGui;
 import net.montoyo.wd.utilities.data.BlockSide;
-import net.montoyo.wd.utilities.Log;
 import net.montoyo.wd.utilities.serialization.NameUUIDPair;
 import net.montoyo.wd.utilities.math.Vector3i;
 
@@ -41,34 +32,6 @@ public class ScreenConfigData extends GuiData {
 		friendRights = scr.friendRights;
 		otherRights = scr.otherRights;
 		onlyUpdate = false;
-	}
-	
-	@OnlyIn(Dist.CLIENT)
-	@Override
-	public Screen createGui(Screen old, Level world) {
-		if (old != null && old instanceof GuiScreenConfig) {
-			GuiScreenConfig gsc = (GuiScreenConfig) old;
-			
-			if (gsc.isForBlock(pos.toBlock(), side)) {
-				gsc.updateFriends(friends);
-				gsc.updateFriendRights(friendRights);
-				gsc.updateOtherRights(otherRights);
-				gsc.updateMyRights();
-				
-				return null;
-			}
-		}
-		
-		if (onlyUpdate)
-			return null;
-		
-		BlockEntity te = world.getBlockEntity(pos.toBlock());
-		if (te == null || !(te instanceof ScreenBlockEntity)) {
-			Log.error("TileEntity at %s is not a screen; can't open gui!", pos.toString());
-			return null;
-		}
-		
-		return new GuiScreenConfig(Component.nullToEmpty(""), (ScreenBlockEntity) te, side, friends, friendRights, otherRights);
 	}
 	
 	@Override

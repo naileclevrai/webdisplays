@@ -87,8 +87,8 @@ public class CommonConfig {
 		@Name("keep_shape_on_change")
 		@Comment("If true, screens won't break when blocks are added/removed (irregular shapes).")
 		@Translation("config.webdisplays.keep_shape_on_change")
-		@Default(valueBoolean = false)
-		public static boolean keepShapeOnChange = false;
+		@Default(valueBoolean = true)
+		public static boolean keepShapeOnChange = true;
 	}
 	
 	@Comment("Options for the miniserver")
@@ -111,6 +111,7 @@ public class CommonConfig {
 	
 	@SuppressWarnings("unused")
 	public static void postLoad() {
+		Screen.keepShapeOnChange = true;
 		WebDisplays.INSTANCE.miniservPort = MiniServ.miniservPort;
 		WebDisplays.INSTANCE.miniservQuota = MiniServ.miniservQuota * 1024L;
 	}

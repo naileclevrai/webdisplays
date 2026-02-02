@@ -132,7 +132,6 @@ public class WebDisplaysConfigScreen extends Screen {
     private int maxResolutionY = CommonConfig.Screen.maxResolutionY;
     private int maxScreenSizeX = CommonConfig.Screen.maxScreenSizeX;
     private int maxScreenSizeY = CommonConfig.Screen.maxScreenSizeY;
-    private boolean keepShapeOnChange = CommonConfig.Screen.keepShapeOnChange;
     private String blacklist = String.join(",", CommonConfig.Browser.blacklist);
     private String homepage = CommonConfig.Browser.homepage;
 
@@ -169,7 +168,6 @@ public class WebDisplaysConfigScreen extends Screen {
     private boolean hardRecipesValue = hardRecipes;
     private boolean joinMessageValue = joinMessage;
     private boolean disableOwnershipThiefValue = disableOwnershipThief;
-    private boolean keepShapeOnChangeValue = keepShapeOnChange;
 
     private String statusMessage = "";
     private int statusColor = 0xA0A0A0;
@@ -241,7 +239,6 @@ public class WebDisplaysConfigScreen extends Screen {
             maxResYField = addNumberField(contentX, contentWidth, y, "Max resolution Y", "Vertical pixel cap for screens.", maxResolutionY); y += rowHeight;
             maxScreenXField = addNumberField(contentX, contentWidth, y, "Max screen width (blocks)", "Maximum horizontal blocks.", maxScreenSizeX); y += rowHeight;
             maxScreenYField = addNumberField(contentX, contentWidth, y, "Max screen height (blocks)", "Maximum vertical blocks.", maxScreenSizeY); y += rowHeight;
-            addLabeledToggle(contentX, contentWidth, y, "Keep screens on shape change", "Allow irregular shapes without breaking screens.", keepShapeOnChangeValue, val -> keepShapeOnChangeValue = val); y += rowHeight;
 
             blacklistField = addTextField(contentX, contentWidth, y, "Blacklist (comma-separated)", "Forbidden domains (ex: site1.com,site2.com).", blacklist); y += rowHeight;
             homepageField = addTextField(contentX, contentWidth, y, "Homepage URL", "Default page to load.", homepage); y += rowHeight;
@@ -437,7 +434,7 @@ public class WebDisplaysConfigScreen extends Screen {
             commonCfg.set("screen_options.max_resolution_y", maxResolutionY);
             commonCfg.set("screen_options.max_width", maxScreenSizeX);
             commonCfg.set("screen_options.max_height", maxScreenSizeY);
-            commonCfg.set("screen_options.keep_shape_on_change", keepShapeOnChangeValue);
+            commonCfg.set("screen_options.keep_shape_on_change", true);
             commonCfg.set("browser_options.blacklist", blacklist);
             commonCfg.set("browser_options.home_page", homepage);
             commonCfg.save();
@@ -476,7 +473,7 @@ public class WebDisplaysConfigScreen extends Screen {
         CommonConfig.Screen.maxResolutionY = maxResolutionY;
         CommonConfig.Screen.maxScreenSizeX = maxScreenSizeX;
         CommonConfig.Screen.maxScreenSizeY = maxScreenSizeY;
-        CommonConfig.Screen.keepShapeOnChange = keepShapeOnChangeValue;
+        CommonConfig.Screen.keepShapeOnChange = true;
         CommonConfig.Browser.blacklist = blacklist.isEmpty() ? new String[0] : blacklist.split(",");
         CommonConfig.Browser.homepage = homepage;
         CommonConfig.postLoad();

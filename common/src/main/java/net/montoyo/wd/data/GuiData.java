@@ -4,12 +4,8 @@
 
 package net.montoyo.wd.data;
 
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.network.PacketDistributor;
 import net.montoyo.wd.net.WDNetworkRegistry;
 import net.montoyo.wd.net.client_bound.S2CMessageOpenGui;
@@ -55,9 +51,6 @@ public abstract class GuiData {
 
     public GuiData() {
     }
-
-    @OnlyIn(Dist.CLIENT)
-    public abstract Screen createGui(Screen old, Level world);
 
     public abstract String getName();
 

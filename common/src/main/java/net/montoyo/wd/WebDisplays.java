@@ -20,7 +20,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.ServerChatEvent;
@@ -32,17 +31,11 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.client.ConfigScreenHandler;
-import net.montoyo.wd.client.ClientProxy;
-import net.montoyo.wd.client.gui.WebDisplaysConfigScreen;
-import net.montoyo.wd.client.gui.camera.KeyboardCamera;
-import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.config.CommonConfig;
 import net.montoyo.wd.controls.ScreenControlRegistry;
 import net.montoyo.wd.core.*;
@@ -115,14 +108,7 @@ public class WebDisplays {
         }
 
         if (FMLEnvironment.dist.isClient()) {
-            // proxies are annoying, so from now on, I'mma be just registering stuff in here
-            FMLJavaModLoadingContext.get().getModEventBus().addListener(ClientProxy::onKeybindRegistry);
-            MinecraftForge.EVENT_BUS.addListener(ClientProxy::onDrawSelection);
-            MinecraftForge.EVENT_BUS.addListener(KeyboardCamera::updateCamera);
-            MinecraftForge.EVENT_BUS.addListener(KeyboardCamera::gameTick);
-            ClientConfig.init();
-            ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
-                    () -> new ConfigScreenHandler.ConfigScreenFactory((mc, screen) -> new WebDisplaysConfigScreen(screen)));
+            initClientBootstrap();
         }
         
         CommonConfig.init();
@@ -368,12 +354,6 @@ public class WebDisplays {
         }
     }
 
-    @SubscribeEvent
-    public void onClientChat(ClientChatEvent ev) {
-        if(ev.getMessage().equals("!WD render recipes"))
-            PROXY.renderRecipes();
-    }
-
     private boolean hasPlayerAdvancement(ServerPlayer ply, ResourceLocation rl) {
         MinecraftServer server = PROXY.getServer();
         if(server == null)
@@ -434,5 +414,14 @@ public class WebDisplays {
 
     public static String applyBlacklist(String url) {
         return isSiteBlacklisted(url) ? BLACKLIST_URL : url;
+    }
+
+    private static void initClientBootstrap() {
+        try {
+            Class<?> cls = Class.forName("net.montoyo.wd.client.ClientBootstrap");
+            cls.getMethod("init").invoke(null);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to initialize WebDisplays client bootstrap", t);
+        }
     }
 }

@@ -4,18 +4,10 @@
 
 package net.montoyo.wd.data;
 
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.montoyo.wd.client.gui.GuiSetURL2;
-import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.net.BufferUtils;
 import net.montoyo.wd.utilities.data.BlockSide;
-import net.montoyo.wd.utilities.Log;
 import net.montoyo.wd.utilities.math.Vector3i;
 
 public class SetURLData extends GuiData {
@@ -44,18 +36,6 @@ public class SetURLData extends GuiData {
         remoteLocation = new Vector3i(rl);
     }
 
-
-    @OnlyIn(Dist.CLIENT)
-    @Override
-    public Screen createGui(Screen old, Level world) {
-        BlockEntity te = world.getBlockEntity(pos.toBlock());
-        if (te == null || !(te instanceof ScreenBlockEntity)) {
-            Log.error("TileEntity at %s is not a screen; can't open gui!", pos.toString());
-            return null;
-        }
-
-        return new GuiSetURL2((ScreenBlockEntity) te, side, url, isRemote ? remoteLocation : null);
-    }
 
     @Override
     public String getName() {
