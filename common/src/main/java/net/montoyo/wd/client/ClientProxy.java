@@ -304,11 +304,6 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 		mc = Minecraft.getInstance();
 		MinecraftForge.EVENT_BUS.register(this);
 	}
-
-	@Override
-	public void init() {
-		MCEF.scheduleForInit((cef) -> onCefInit());
-	}
 	
 	@Override
 	public void onCefInit() {

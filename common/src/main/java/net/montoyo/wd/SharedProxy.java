@@ -4,6 +4,7 @@
 
 package net.montoyo.wd;
 
+import com.cinemamod.mcef.MCEF;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -38,6 +39,7 @@ public class SharedProxy {
     }
 
     public void init() {
+        MCEF.scheduleForInit((cef) -> onCefInit());
     }
 
     public void postInit() {

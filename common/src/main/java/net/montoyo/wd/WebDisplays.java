@@ -20,6 +20,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.ServerChatEvent;
@@ -365,6 +366,12 @@ public class WebDisplays {
             Player ply = ev.getPlayer();
             ply.level().playSound(null, ply.getX(), ply.getY(), ply.getZ(), soundIronic, SoundSource.PLAYERS, 1.0f, 1.0f);
         }
+    }
+
+    @SubscribeEvent
+    public void onClientChat(ClientChatEvent ev) {
+        if(ev.getMessage().equals("!WD render recipes"))
+            PROXY.renderRecipes();
     }
 
     private boolean hasPlayerAdvancement(ServerPlayer ply, ResourceLocation rl) {
