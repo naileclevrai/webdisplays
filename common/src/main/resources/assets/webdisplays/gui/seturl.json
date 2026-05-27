@@ -149,10 +149,19 @@
     },
     {
       "type": "Button",
+      "name": "btnTestPattern",
+      "x": 100,
+      "y": 148,
+      "width": 120,
+      "label": "$webdisplays.gui.seturl.testpattern.start",
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Button",
       "name": "btnShutDown",
       "label": "$webdisplays.gui.seturl.shutdown",
       "x": 0,
-      "y": "isPad & 38 | 176",
+      "y": "isPad & 38 | 172",
       "width": 96,
       "visible": "isPad",
       "disabled": "1 - isPad"
@@ -162,7 +171,7 @@
       "name": "btnCancel",
       "label": "$webdisplays.gui.seturl.cancel",
       "x": "isPad & 100 | 0",
-      "y": "isPad & 38 | 176",
+      "y": "isPad & 38 | 172",
       "width": "isPad & 96 | 146"
     },
     {
@@ -170,7 +179,7 @@
       "name": "btnOk",
       "label": "$webdisplays.gui.seturl.ok",
       "x": "isPad & 200 | 150",
-      "y": "isPad & 38 | 176",
+      "y": "isPad & 38 | 172",
       "width": "isPad & 96 | 146"
     }
   ],

@@ -23,6 +23,7 @@ import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.utilities.ScreenShape;
+import net.montoyo.wd.utilities.link.LinkedScreenHelper;
 import net.montoyo.wd.utilities.data.ScreenPieceType;
 import net.montoyo.wd.utilities.data.ScreenShapeMode;
 import net.montoyo.wd.utilities.math.Vector3f;
@@ -132,7 +133,11 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 		
 		for (int i = 0; i < te.screenCount(); i++) {
 			ScreenData scr = te.getScreen(i);
-			if (scr.browser == null) {
+			boolean showTestPattern = scr.testPattern;
+			if (WebDisplays.PROXY instanceof ClientProxy patternProxy)
+				showTestPattern = LinkedScreenHelper.isTestPatternVisible(patternProxy, te, scr);
+
+			if (scr.browser == null && !showTestPattern) {
 				if (WebDisplays.PROXY instanceof ClientProxy proxy) {
 					if (scr.isLinked()) {
 						LinkedScreenGroup group = proxy.getLinkedGroup(te, scr);
@@ -157,7 +162,7 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 				} else {
 					continue;
 				}
-				if (scr.browser == null)
+				if (scr.browser == null && !scr.testPattern)
 					continue;
 			}
 
@@ -498,6 +503,11 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 			}
 
 			RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+			if (showTestPattern) {
+				Vector2i patternOffset = groupEntry != null ? groupEntry.offset : new Vector2i();
+				ScreenTestPatternRenderer.render(poseStack, tesselator, builder, shape, scr, sw, sh, unitX, unitY,
+						patternOffset, bufferSource, Minecraft.getInstance().font, packedLight);
+			} else {
 			RenderSystem._setShaderTexture(0, ((MCEFBrowser) scr.browser).getRenderer().getTextureID());
 			RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 			builder.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
@@ -519,23 +529,6 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 				}
 			}
 			tesselator.end();
-
-			if (scr.isLinked()) {
-				RenderSystem.setShader(GameRenderer::getPositionColorShader);
-				builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-				float badge = Math.min(unitX, unitY) * 0.18f;
-				float bx0 = -sw;
-				float by0 = sh - badge;
-				float bx1 = bx0 + badge;
-				float by1 = sh;
-				float r = scr.linkOrigin ? 0.2f : 0.55f;
-				float g = scr.linkOrigin ? 0.95f : 0.55f;
-				float b = scr.linkOrigin ? 0.35f : 0.55f;
-				builder.vertex(poseStack.last().pose(), bx0, by0, 0.506f).color(r, g, b, 0.95f).endVertex();
-				builder.vertex(poseStack.last().pose(), bx1, by0, 0.506f).color(r, g, b, 0.95f).endVertex();
-				builder.vertex(poseStack.last().pose(), bx1, by1, 0.506f).color(r, g, b, 0.95f).endVertex();
-				builder.vertex(poseStack.last().pose(), bx0, by1, 0.506f).color(r, g, b, 0.95f).endVertex();
-				tesselator.end();
 			}
 
 			if (scr.shapeMode != null && scr.shapeMode != ScreenShapeMode.NONE) {

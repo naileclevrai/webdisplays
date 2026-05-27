@@ -21,6 +21,7 @@ import net.montoyo.wd.client.gui.loading.FillControl;
 import net.montoyo.wd.controls.builtin.ScreenModifyControl;
 import net.montoyo.wd.controls.builtin.ScreenLinkControl;
 import net.montoyo.wd.controls.builtin.ScreenRefreshControl;
+import net.montoyo.wd.controls.builtin.TestPatternControl;
 import net.montoyo.wd.controls.builtin.VolumeControl;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
@@ -91,6 +92,9 @@ public class GuiSetURL2 extends WDScreen {
 	private Button btnRefreshBrowser;
 
 	@FillControl
+	private Button btnTestPattern;
+
+	@FillControl
 	private Button btnShutDown;
 
 	@FillControl
@@ -131,6 +135,7 @@ public class GuiSetURL2 extends WDScreen {
 					tfLinkId.setText(screen.linkId == null ? "" : screen.linkId);
 				updateShapeModeStr();
 				updateLinkLabels();
+				updateTestPatternButton(screen);
 				refreshLinkedUi(screen);
 			}
 		}
@@ -182,6 +187,17 @@ public class GuiSetURL2 extends WDScreen {
 			btnLinkMode.setDisabled(isSlave);
 		if (tfLinkId != null)
 			tfLinkId.setDisabled(isSlave);
+	}
+
+	private void updateTestPatternButton(ScreenData screen) {
+		if (btnTestPattern == null || screen == null)
+			return;
+		boolean canToggle = !LinkedScreenHelper.isLinkedSlave(screen);
+		btnTestPattern.setDisabled(!canToggle);
+		String key = screen.testPattern
+				? "webdisplays.gui.seturl.testpattern.stop"
+				: "webdisplays.gui.seturl.testpattern.start";
+		btnTestPattern.setLabel(I18n.get(key));
 	}
 
 	private void updateShapeModeStr() {
@@ -260,6 +276,21 @@ public class GuiSetURL2 extends WDScreen {
 					screenSide,
 					new ScreenRefreshControl()
 				));
+		}
+		else if (ev.getSource() == btnTestPattern) {
+			if (!isPad && tileEntity != null) {
+				ScreenData screen = tileEntity.getScreen(screenSide);
+				if (screen != null && !LinkedScreenHelper.isLinkedSlave(screen)) {
+					boolean next = !screen.testPattern;
+					tileEntity.setTestPattern(screenSide, next);
+					WDNetworkRegistry.INSTANCE.sendToServer(new C2SMessageScreenCtrl(
+						tileEntity,
+						screenSide,
+						new TestPatternControl(next)
+					));
+					updateTestPatternButton(tileEntity.getScreen(screenSide));
+				}
+			}
 		}
 		else if (ev.getSource() == btnShutDown) {
 			if (isPad) {

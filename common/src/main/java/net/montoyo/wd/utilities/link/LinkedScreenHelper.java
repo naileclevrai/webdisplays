@@ -3,7 +3,9 @@ package net.montoyo.wd.utilities.link;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraftforge.network.PacketDistributor;
+import net.montoyo.wd.WebDisplays;
 import net.montoyo.wd.client.ClientProxy;
 import net.montoyo.wd.client.link.LinkedScreenGroup;
 import net.montoyo.wd.entity.ScreenBlockEntity;
@@ -33,23 +35,55 @@ public final class LinkedScreenHelper {
         if (level == null || near == null || linkId == null || linkId.isEmpty() || visitor == null)
             return;
 
-        BlockPos.betweenClosedStream(
-                near.offset(-SEARCH_RADIUS, -SEARCH_RADIUS, -SEARCH_RADIUS),
-                near.offset(SEARCH_RADIUS, SEARCH_RADIUS, SEARCH_RADIUS)
-        ).forEach(pos -> {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (!(be instanceof ScreenBlockEntity tes))
-                return;
+        int minX = near.getX() - SEARCH_RADIUS;
+        int maxX = near.getX() + SEARCH_RADIUS;
+        int minY = Math.max(level.getMinBuildHeight(), near.getY() - SEARCH_RADIUS);
+        int maxY = Math.min(level.getMaxBuildHeight() - 1, near.getY() + SEARCH_RADIUS);
+        int minZ = near.getZ() - SEARCH_RADIUS;
+        int maxZ = near.getZ() + SEARCH_RADIUS;
 
-            for (int i = 0; i < tes.screenCount(); i++) {
-                ScreenData scr = tes.getScreen(i);
-                if (scr == null || !linkId.equals(scr.linkId))
+        int minChunkX = minX >> 4;
+        int maxChunkX = maxX >> 4;
+        int minChunkZ = minZ >> 4;
+        int maxChunkZ = maxZ >> 4;
+
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                if (!level.hasChunk(cx, cz))
                     continue;
-                if (scr.side != side || scr.rotation != rotation)
-                    continue;
-                visitor.accept(tes, scr, scr.side);
+
+                LevelChunk chunk = level.getChunk(cx, cz);
+                for (BlockEntity be : chunk.getBlockEntities().values()) {
+                    if (!(be instanceof ScreenBlockEntity tes))
+                        continue;
+
+                    BlockPos pos = be.getBlockPos();
+                    if (pos.getX() < minX || pos.getX() > maxX
+                            || pos.getY() < minY || pos.getY() > maxY
+                            || pos.getZ() < minZ || pos.getZ() > maxZ)
+                        continue;
+
+                    visitMatchingScreens(tes, linkId, side, rotation, visitor);
+                }
             }
-        });
+        }
+    }
+
+    private static void visitMatchingScreens(ScreenBlockEntity tes, String linkId, BlockSide side, Rotation rotation,
+                                             GroupVisitor visitor) {
+        for (int i = 0; i < tes.screenCount(); i++) {
+            ScreenData scr = tes.getScreen(i);
+            if (scr == null || !linkId.equals(scr.linkId))
+                continue;
+            if (scr.side != side || scr.rotation != rotation)
+                continue;
+            visitor.accept(tes, scr, scr.side);
+        }
+    }
+
+    private static boolean matchesGroup(ScreenData ref, ScreenData scr) {
+        return scr != null && ref.linkId.equals(scr.linkId)
+                && scr.side == ref.side && scr.rotation == ref.rotation;
     }
 
     public static boolean isLinkedSlave(ScreenData scr) {
@@ -66,6 +100,18 @@ public final class LinkedScreenHelper {
         if (group != null && group.getOrigin() != null && group.getOrigin().screen != null)
             return group.getOrigin().screen;
         return scr;
+    }
+
+    /** Affichage client : le flag peut ne pas être sync sur les slaves — on suit l'origin du groupe. */
+    public static boolean isTestPatternVisible(ClientProxy proxy, ScreenBlockEntity be, ScreenData scr) {
+        if (scr == null)
+            return false;
+        if (scr.testPattern)
+            return true;
+        if (!scr.isLinked() || proxy == null)
+            return false;
+        ScreenData origin = getOriginScreen(proxy, be, scr);
+        return origin != null && origin != scr && origin.testPattern;
     }
 
     public static void propagateUrlFromOrigin(Level level, ScreenBlockEntity originTe, ScreenData originScr, String url) {
@@ -195,6 +241,39 @@ public final class LinkedScreenHelper {
                     }
                     tes.setChanged();
                 });
+    }
+
+    public static void propagateTestPatternFromOrigin(Level level, ScreenBlockEntity originTe, ScreenData originScr,
+                                                     boolean enabled) {
+        if (originTe == null || originScr == null || !originScr.isLinked() || !originScr.linkOrigin)
+            return;
+
+        forEachInGroup(level, originTe.getBlockPos(), originScr.linkId, originScr.side, originScr.rotation,
+                (tes, scr, side) -> {
+                    if (tes == originTe && scr == originScr)
+                        return;
+                    tes.applyTestPatternState(side, enabled);
+                    tes.setChanged();
+                });
+    }
+
+    /** Propagation immédiate côté client via les écrans déjà trackés (O(n), pas de scan de chunks). */
+    public static void propagateTestPatternClient(ScreenBlockEntity originTe, ScreenData originScr, boolean enabled) {
+        if (originTe == null || originScr == null || !originScr.isLinked() || !originScr.linkOrigin)
+            return;
+        if (!(WebDisplays.PROXY instanceof ClientProxy proxy))
+            return;
+
+        for (ScreenBlockEntity be : proxy.getScreens()) {
+            if (be.getLevel() == null || be.getLevel() != originTe.getLevel())
+                continue;
+            for (int i = 0; i < be.screenCount(); i++) {
+                ScreenData scr = be.getScreen(i);
+                if (!matchesGroup(originScr, scr))
+                    continue;
+                be.applyTestPatternState(scr.side, enabled);
+            }
+        }
     }
 
     private static int comparePos(BlockPos a, BlockPos b) {

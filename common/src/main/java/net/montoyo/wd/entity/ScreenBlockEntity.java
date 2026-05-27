@@ -1263,6 +1263,39 @@ public class ScreenBlockEntity extends BlockEntity {
         }
     }
 
+    public void applyTestPatternState(BlockSide side, boolean enabled) {
+        ScreenData scr = getScreen(side);
+        if (scr == null)
+            return;
+        scr.testPattern = enabled;
+    }
+
+    public void setTestPattern(BlockSide side, boolean enabled) {
+        ScreenData scr = getScreen(side);
+        if (scr == null) {
+            Log.error("Trying to toggle test pattern on invalid screen (side %s)", side.toString());
+            return;
+        }
+
+        if (net.montoyo.wd.utilities.link.LinkedScreenHelper.isLinkedSlave(scr)) {
+            Log.warning("Blocked test pattern toggle on linked slave at %s (%s)", getBlockPos(), side);
+            return;
+        }
+
+        applyTestPatternState(side, enabled);
+
+        if (level.isClientSide) {
+            if (scr.isLinked() && scr.linkOrigin)
+                net.montoyo.wd.utilities.link.LinkedScreenHelper.propagateTestPatternClient(this, scr, enabled);
+        } else {
+            WDNetworkRegistry.INSTANCE.send(PacketDistributor.NEAR.with(() -> point(level, getBlockPos())),
+                    S2CMessageScreenUpdate.testPattern(this, side, enabled));
+            if (scr.isLinked() && scr.linkOrigin)
+                net.montoyo.wd.utilities.link.LinkedScreenHelper.propagateTestPatternFromOrigin(level, this, scr, enabled);
+            setChanged();
+        }
+    }
+
     public void deactivate() {
         for (ScreenData screen : screens) {
             if (screen.browser != null) {

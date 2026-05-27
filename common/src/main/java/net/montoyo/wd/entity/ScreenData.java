@@ -55,6 +55,7 @@ public class ScreenData {
     public String linkId = "";
     public ScreenLinkMode linkMode = ScreenLinkMode.JOINED;
     public boolean linkOrigin = false;
+    public boolean testPattern = false;
 
     public int mouseType;
 
@@ -137,6 +138,9 @@ public class ScreenData {
         else
             ret.linkOrigin = false;
 
+        if (tag.contains("TestPattern"))
+            ret.testPattern = tag.getBoolean("TestPattern");
+
         return ret;
     }
 
@@ -181,6 +185,7 @@ public class ScreenData {
         tag.putString("LinkId", linkId == null ? "" : linkId);
         tag.putByte("LinkMode", (byte) linkMode.ordinal());
         tag.putBoolean("LinkOrigin", linkOrigin);
+        tag.putBoolean("TestPattern", testPattern);
         return tag;
     }
 

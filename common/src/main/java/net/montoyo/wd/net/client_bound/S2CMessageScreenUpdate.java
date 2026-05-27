@@ -123,6 +123,12 @@ public class S2CMessageScreenUpdate extends Packet  {
         return screenUpdate;
     }
 
+    public static S2CMessageScreenUpdate testPattern(ScreenBlockEntity screen, BlockSide side, boolean enabled) {
+        S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
+        screenUpdate.control = new TestPatternControl(enabled);
+        return screenUpdate;
+    }
+
     public static S2CMessageScreenUpdate turnOff(BlockPos blockPos, BlockSide side) {
         S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(blockPos, side);
         screenUpdate.control = TurnOffControl.INSTANCE;

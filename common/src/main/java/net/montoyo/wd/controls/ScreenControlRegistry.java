@@ -66,6 +66,7 @@ public class ScreenControlRegistry {
 		register(OwnerControl.id, new ScreenControlType<>(OwnerControl.class, OwnerControl::new));
 		register(ScreenLinkControl.id, new ScreenControlType<>(ScreenLinkControl.class, ScreenLinkControl::new));
 		register(ScreenRefreshControl.id, new ScreenControlType<>(ScreenRefreshControl.class, ScreenRefreshControl::new));
+		register(TestPatternControl.id, new ScreenControlType<>(TestPatternControl.class, TestPatternControl::new));
 		register(TurnOffControl.id, new ScreenControlType<>(TurnOffControl.class, (buf) -> TurnOffControl.INSTANCE));
 	}
 	
