@@ -23,6 +23,7 @@ import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.utilities.ScreenShape;
+import net.montoyo.wd.utilities.data.ScreenPieceType;
 import net.montoyo.wd.utilities.data.ScreenShapeMode;
 import net.montoyo.wd.utilities.math.Vector3f;
 import net.montoyo.wd.utilities.math.Vector2i;
@@ -58,6 +59,51 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 
 	private static void addVertex(BufferBuilder builder, PoseStack poseStack, float x, float y, float z, float u, float v) {
 		builder.vertex(poseStack.last().pose(), x, y, z).uv(u, v).color(1.f, 1.f, 1.f, 1.f).endVertex();
+	}
+
+	private static void addTriangle(BufferBuilder builder, PoseStack poseStack, float z,
+	                                float x0, float y0, float u0, float v0,
+	                                float x1, float y1, float u1, float v1,
+	                                float x2, float y2, float u2, float v2) {
+		addVertex(builder, poseStack, x0, y0, z, u0, v0);
+		addVertex(builder, poseStack, x1, y1, z, u1, v1);
+		addVertex(builder, poseStack, x2, y2, z, u2, v2);
+	}
+
+	private static void renderScreenCell(BufferBuilder builder, PoseStack poseStack, ScreenPieceType piece, float z,
+	                                     float x0, float x1, float y0, float y1,
+	                                     float u0, float u1, float v0, float v1) {
+		float xm = (x0 + x1) * 0.5f;
+		float ym = (y0 + y1) * 0.5f;
+		float um = (u0 + u1) * 0.5f;
+		float vm = (v0 + v1) * 0.5f;
+
+		switch (piece) {
+			case FULL -> {
+				addTriangle(builder, poseStack, z, x0, y0, u0, v1, x1, y0, u1, v1, x1, y1, u1, v0);
+				addTriangle(builder, poseStack, z, x0, y0, u0, v1, x1, y1, u1, v0, x0, y1, u0, v0);
+			}
+			case HALF_BOTTOM -> {
+				addTriangle(builder, poseStack, z, x0, y0, u0, v1, x1, y0, u1, v1, x1, ym, u1, vm);
+				addTriangle(builder, poseStack, z, x0, y0, u0, v1, x1, ym, u1, vm, x0, ym, u0, vm);
+			}
+			case HALF_TOP -> {
+				addTriangle(builder, poseStack, z, x0, ym, u0, vm, x1, ym, u1, vm, x1, y1, u1, v0);
+				addTriangle(builder, poseStack, z, x0, ym, u0, vm, x1, y1, u1, v0, x0, y1, u0, v0);
+			}
+			case HALF_LEFT -> {
+				addTriangle(builder, poseStack, z, x0, y0, u0, v1, xm, y0, um, v1, xm, y1, um, v0);
+				addTriangle(builder, poseStack, z, x0, y0, u0, v1, xm, y1, um, v0, x0, y1, u0, v0);
+			}
+			case HALF_RIGHT -> {
+				addTriangle(builder, poseStack, z, xm, y0, um, v1, x1, y0, u1, v1, x1, y1, u1, v0);
+				addTriangle(builder, poseStack, z, xm, y0, um, v1, x1, y1, u1, v0, xm, y1, um, v0);
+			}
+			case TRIANGLE_SW -> addTriangle(builder, poseStack, z, x0, y0, u0, v1, x1, y0, u1, v1, x0, y1, u0, v0);
+			case TRIANGLE_SE -> addTriangle(builder, poseStack, z, x1, y0, u1, v1, x1, y1, u1, v0, x0, y0, u0, v1);
+			case TRIANGLE_NW -> addTriangle(builder, poseStack, z, x0, y1, u0, v0, x0, y0, u0, v1, x1, y1, u1, v0);
+			case TRIANGLE_NE -> addTriangle(builder, poseStack, z, x1, y1, u1, v0, x0, y1, u0, v0, x1, y0, u1, v1);
+		}
 	}
 
 	@Override
@@ -460,7 +506,7 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 			RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
 			RenderSystem._setShaderTexture(0, ((MCEFBrowser) scr.browser).getRenderer().getTextureID());
 			RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-			builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+			builder.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
 			for (int y = 0; y < scr.size.y; y++) {
 				for (int x = 0; x < scr.size.x; x++) {
 					if (!shape.hasBlock(x, y))
@@ -475,10 +521,7 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 					float v0 = 1.0f - (groupOffset.y + y + 1) * invHeight;
 					float v1 = 1.0f - (groupOffset.y + y) * invHeight;
 
-					builder.vertex(poseStack.last().pose(), x0, y0, 0.505f).uv(u0, v1).color(1.f, 1.f, 1.f, 1.f).endVertex();
-					builder.vertex(poseStack.last().pose(), x1, y0, 0.505f).uv(u1, v1).color(1.f, 1.f, 1.f, 1.f).endVertex();
-					builder.vertex(poseStack.last().pose(), x1, y1, 0.505f).uv(u1, v0).color(1.f, 1.f, 1.f, 1.f).endVertex();
-					builder.vertex(poseStack.last().pose(), x0, y1, 0.505f).uv(u0, v0).color(1.f, 1.f, 1.f, 1.f).endVertex();
+					renderScreenCell(builder, poseStack, shape.getPiece(x, y), 0.505f, x0, x1, y0, y1, u0, u1, v0, v1);
 				}
 			}
 			tesselator.end();

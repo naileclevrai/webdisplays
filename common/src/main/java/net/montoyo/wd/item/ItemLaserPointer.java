@@ -55,7 +55,7 @@ public class ItemLaserPointer extends Item implements WDItem {
 		
 		BlockPos bpos = result.getBlockPos();
 		
-		if (result.getType() == HitResult.Type.BLOCK && mc.level.getBlockState(bpos).getBlock() == BlockRegistry.SCREEN_BLOCk.get()) {
+		if (result.getType() == HitResult.Type.BLOCK && ScreenBlocks.isScreen(mc.level.getBlockState(bpos))) {
 			Vector3i shapePos = new Vector3i(result.getBlockPos());
 			BlockSide side = BlockSide.values()[result.getDirection().ordinal()];
 			Vector3i tePos = null;
