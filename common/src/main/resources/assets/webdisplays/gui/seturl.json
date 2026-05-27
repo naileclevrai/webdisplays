@@ -1,0 +1,143 @@
+{
+  "controls": [
+    {
+      "type": "Label",
+      "label": "$webdisplays.gui.seturl.url",
+      "x": 0,
+      "y": 0,
+      "shadowed": true
+    },
+    {
+      "type": "TextField",
+      "name": "tfURL",
+      "x": 0,
+      "y": 12,
+      "width": 272,
+      "maxLength": 65535
+    },
+    {
+      "type": "YTButton",
+      "x": 276,
+      "y": 13,
+      "width": 20,
+      "urlField": "tfURL"
+    },
+    {
+      "type": "Label",
+      "label": "$webdisplays.gui.seturl.volume",
+      "x": 0,
+      "y": 38,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "TextField",
+      "name": "tfVolume",
+      "x": 50,
+      "y": 38,
+      "width": 40,
+      "maxLength": 3,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Label",
+      "label": "%",
+      "x": 92,
+      "y": 38,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "CheckBox",
+      "name": "cbAutoVolume",
+      "label": "$webdisplays.gui.seturl.autovolume",
+      "x": 110,
+      "y": 38,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Label",
+      "label": "$webdisplays.gui.screencfg.shapemode",
+      "x": 0,
+      "y": 56,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Button",
+      "name": "btnShapeMode",
+      "x": 110,
+      "y": 55,
+      "width": 116,
+      "label": "$webdisplays.gui.screencfg.shapemode.none",
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Label",
+      "label": "$webdisplays.gui.seturl.linkid",
+      "x": 0,
+      "y": 74,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "TextField",
+      "name": "tfLinkId",
+      "x": 24,
+      "y": 74,
+      "width": 92,
+      "maxLength": 64,
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Button",
+      "name": "btnLink",
+      "x": 120,
+      "y": 73,
+      "width": 60,
+      "label": "$webdisplays.gui.seturl.link.sync",
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Button",
+      "name": "btnLinkMode",
+      "x": 184,
+      "y": 73,
+      "width": 112,
+      "label": "$webdisplays.gui.seturl.linkmode.joined",
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Button",
+      "name": "btnRefreshBrowser",
+      "x": 0,
+      "y": 96,
+      "width": 96,
+      "label": "$webdisplays.gui.seturl.refresh",
+      "visible": "1 - isPad"
+    },
+    {
+      "type": "Button",
+      "name": "btnShutDown",
+      "label": "$webdisplays.gui.seturl.shutdown",
+      "x": 0,
+      "y": "isPad & 38 | 136",
+      "width": 96,
+      "visible": "isPad",
+      "disabled": "1 - isPad"
+    },
+    {
+      "type": "Button",
+      "name": "btnCancel",
+      "label": "$webdisplays.gui.seturl.cancel",
+      "x": "isPad & 100 | 0",
+      "y": "isPad & 38 | 136",
+      "width": "isPad & 96 | 146"
+    },
+    {
+      "type": "Button",
+      "name": "btnOk",
+      "label": "$webdisplays.gui.seturl.ok",
+      "x": "isPad & 200 | 150",
+      "y": "isPad & 38 | 136",
+      "width": "isPad & 96 | 146"
+    }
+  ],
+  "center": true
+}

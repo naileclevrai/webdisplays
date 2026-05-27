@@ -1,0 +1,36 @@
+tasks.register('forgeClient', GradleBuild) {
+    group = 'webdisplays'
+    tasks = [
+            ':forge:runClient'
+    ]
+}
+
+tasks.register('forgeServer', GradleBuild) {
+    group = 'webdisplays'
+    tasks = [
+            ':forge:runServer'
+    ]
+}
+
+tasks.register('fabricClient', GradleBuild) {
+    group = 'webdisplays'
+    tasks = [
+            ':fabric:runClient'
+    ]
+}
+
+tasks.register('fabricServer', GradleBuild) {
+    group = 'webdisplays'
+    tasks = [
+            ':fabric:runServer'
+    ]
+}
+
+tasks.register('cleanAll', GradleBuild) {
+    group = 'webdisplays'
+    tasks = [
+            ':common:clean',
+            ':forge:clean',
+            ':fabric:clean'
+    ]
+}

@@ -1,0 +1,38 @@
+package net.montoyo.wd.registry;
+
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+import net.montoyo.wd.block.KeyboardBlockLeft;
+import net.montoyo.wd.block.KeyboardBlockRight;
+import net.montoyo.wd.block.PeripheralBlock;
+import net.montoyo.wd.block.ScreenBlock;
+import net.montoyo.wd.core.DefaultPeripheral;
+import net.montoyo.wd.utilities.data.ScreenPieceType;
+
+public class BlockRegistry {
+    public static void init(IEventBus bus) {
+        BLOCKS.register(bus);
+    }
+
+    public static DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, "webdisplays");
+
+    public static final RegistryObject<ScreenBlock> SCREEN_BLOCk = BLOCKS.register("screen", () -> new ScreenBlock(BlockBehaviour.Properties.copy(Blocks.STONE)));
+
+    public static final RegistryObject<ScreenBlock> SCREEN_HALF = BLOCKS.register("screen_half",
+            () -> new ScreenBlock(BlockBehaviour.Properties.copy(Blocks.STONE), ScreenBlock.ShapeCategory.HALF, ScreenPieceType.HALF_BOTTOM));
+
+    public static final RegistryObject<ScreenBlock> SCREEN_TRIANGLE = BLOCKS.register("screen_triangle",
+            () -> new ScreenBlock(BlockBehaviour.Properties.copy(Blocks.STONE), ScreenBlock.ShapeCategory.TRIANGLE, ScreenPieceType.TRIANGLE_SW));
+
+    public static final RegistryObject<KeyboardBlockLeft> KEYBOARD_BLOCK = BlockRegistry.BLOCKS.register("kb_left", KeyboardBlockLeft::new);
+    public static final RegistryObject<KeyboardBlockRight> blockKbRight = BLOCKS.register("kb_right", KeyboardBlockRight::new);
+
+    public static final RegistryObject<PeripheralBlock> REDSTONE_CONTROL_BLOCK = BlockRegistry.BLOCKS.register("redctrl", () -> new PeripheralBlock(DefaultPeripheral.REDSTONE_CONTROLLER));
+    public static final RegistryObject<PeripheralBlock> REMOTE_CONTROLLER_BLOCK = BlockRegistry.BLOCKS.register("rctrl", () -> new PeripheralBlock(DefaultPeripheral.REMOTE_CONTROLLER));
+    public static final RegistryObject<PeripheralBlock> SERVER_BLOCK = BlockRegistry.BLOCKS.register("server", () -> new PeripheralBlock(DefaultPeripheral.SERVER));
+}

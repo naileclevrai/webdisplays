@@ -1,0 +1,108 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.fabricmc.net/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath("net.fabricmc:fabric-loom:${fabric_loom_version}") {
+            exclude group: 'com.google.code.gson', module: 'gson'
+        }
+        classpath "com.google.code.gson:gson:2.10.1"
+    }
+    configurations.classpath {
+        resolutionStrategy.force "com.google.code.gson:gson:2.10.1"
+    }
+}
+
+plugins {
+    id 'maven-publish'
+}
+
+apply plugin: 'fabric-loom'
+
+archivesBaseName = "${archives_base_name}-fabric"
+version = mod_version
+group = maven_group
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(java_version as int)
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.fabricmc.net/' }
+    maven { url = 'https://maven.parchmentmc.org' }
+    maven { url = 'https://mvn.devos.one/releases/' }
+    maven { url = 'https://maven.terraformersmc.com/releases' }
+    maven { url = 'https://maven.jamieswhiteshirt.com/libs-release' }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.layered() {
+        officialMojangMappings()
+        parchment("org.parchmentmc.data:parchment-${minecraft_version}:${parchment_version}@zip")
+    }
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:base:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:core:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:common:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:registries:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:config:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:client_events:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:models:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:model_loader:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:model_materials:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:networking:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:tags:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:entity:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:attributes:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:data:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:utility:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:transfer:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:tool_actions:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:items:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:blocks:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:extensions:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:level_events:${porting_lib_version}"))
+    modImplementation(include("io.github.fabricators_of_create.Porting-Lib:gui_utils:${porting_lib_version}"))
+
+    modCompileOnly fileTree(dir: rootProject.file('libs'), include: ['mcef*.jar'])
+}
+
+loom {
+    accessWidenerPath = file("${project(':common').projectDir}/src/main/resources/webdisplays.accesswidener")
+}
+
+processResources {
+    inputs.property "version", mod_version
+    inputs.property "minecraft_version", minecraft_version
+    inputs.property "mod_id", mod_id
+    inputs.property "mod_name", mod_name
+    inputs.property "fabric_loader_version", fabric_loader_version
+
+    filesMatching('fabric.mod.json') {
+        expand 'version': mod_version,
+                'minecraft_version': minecraft_version,
+                'mod_id': mod_id,
+                'mod_name': mod_name,
+                'fabric_loader_version': fabric_loader_version
+    }
+
+    from("${project(':common').projectDir}/src/main/resources")
+}
+
+tasks.withType(JavaCompile).configureEach {
+    source(project(':common').sourceSets.main.allSource)
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = maven_group
+            artifactId = "${archives_base_name}-fabric"
+            version = mod_version
+        }
+    }
+}
