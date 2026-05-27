@@ -23,6 +23,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
@@ -55,7 +57,8 @@ public class ScreenBlock extends BaseEntityBlock {
     public static final BooleanProperty hasTE = BooleanProperty.create("haste");
     public static final BooleanProperty emitting = BooleanProperty.create("emitting");
     public static final net.minecraft.world.level.block.state.properties.EnumProperty<ScreenPieceType> piece = ScreenPieceType.PROPERTY;
-    private static final Property<?>[] properties = new Property<?>[]{hasTE, emitting, piece};
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    private static final Property<?>[] properties = new Property<?>[]{hasTE, emitting, piece, FACING};
 
     private final ShapeCategory shapeCategory;
 
@@ -69,7 +72,8 @@ public class ScreenBlock extends BaseEntityBlock {
         this.registerDefaultState(this.defaultBlockState()
                 .setValue(hasTE, false)
                 .setValue(emitting, false)
-                .setValue(piece, defaultPiece));
+                .setValue(piece, defaultPiece)
+                .setValue(FACING, Direction.NORTH));
     }
 
     public ShapeCategory getShapeCategory() {
@@ -80,11 +84,12 @@ public class ScreenBlock extends BaseEntityBlock {
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
         BlockState state = defaultBlockState();
         ScreenPieceType placedPiece = switch (shapeCategory) {
-            case HALF -> ScreenPieceType.pickHalfFromYaw(ctx.getRotation().toYRot());
-            case TRIANGLE -> ScreenPieceType.pickTriangleFromYaw(ctx.getRotation().toYRot());
+            case HALF -> ScreenPieceType.pickHalfFromYaw(ctx.getRotation());
+            case TRIANGLE -> ScreenPieceType.pickTriangleFromYaw(ctx.getRotation());
             default -> ScreenPieceType.FULL;
         };
-        return state.setValue(piece, placedPiece);
+        return state.setValue(piece, placedPiece)
+                .setValue(FACING, ctx.getHorizontalDirection().getOpposite());
     }
 
     @Override

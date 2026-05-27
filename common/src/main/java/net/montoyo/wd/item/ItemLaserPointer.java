@@ -23,6 +23,7 @@ import net.montoyo.wd.net.WDNetworkRegistry;
 import net.montoyo.wd.net.server_bound.C2SMessageScreenCtrl;
 import net.montoyo.wd.registry.BlockRegistry;
 import net.montoyo.wd.utilities.Multiblock;
+import net.montoyo.wd.utilities.ScreenBlocks;
 import net.montoyo.wd.utilities.ScreenShape;
 import net.montoyo.wd.utilities.data.BlockSide;
 import net.montoyo.wd.utilities.math.Vector2i;

@@ -24,6 +24,8 @@ public class WDTabs {
 			.displayItems((params, output) -> {
 				// core items
 				output.accept(ItemRegistry.SCREEN.get());
+				output.accept(ItemRegistry.SCREEN_HALF.get());
+				output.accept(ItemRegistry.SCREEN_TRIANGLE.get());
 				output.accept(ItemRegistry.KEYBOARD.get());
 				output.accept(ItemRegistry.LINKER.get());
 				// remote control

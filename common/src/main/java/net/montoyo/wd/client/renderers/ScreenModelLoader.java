@@ -8,14 +8,13 @@ import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.*;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
 import net.minecraftforge.client.model.geometry.IGeometryLoader;
 import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
+import net.montoyo.wd.utilities.data.ScreenPieceType;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Set;
 import java.util.function.Function;
 
 public class ScreenModelLoader implements IGeometryLoader<ScreenModelLoader.ScreenModelGeometry> {
@@ -35,14 +34,29 @@ public class ScreenModelLoader implements IGeometryLoader<ScreenModelLoader.Scre
     
     @Override
     public ScreenModelGeometry read(JsonObject jsonObject, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
-        return new ScreenModelGeometry();
+        ScreenPieceType defaultPiece = ScreenPieceType.FULL;
+        if (jsonObject.has("default_piece")) {
+            String pieceName = GsonHelper.getAsString(jsonObject, "default_piece");
+            for (ScreenPieceType piece : ScreenPieceType.values()) {
+                if (piece.getSerializedName().equals(pieceName)) {
+                    defaultPiece = piece;
+                    break;
+                }
+            }
+        }
+        return new ScreenModelGeometry(defaultPiece);
     }
 
     public static class ScreenModelGeometry implements IUnbakedGeometry<ScreenModelGeometry> {
-        
+        private final ScreenPieceType defaultPiece;
+
+        public ScreenModelGeometry(ScreenPieceType defaultPiece) {
+            this.defaultPiece = defaultPiece;
+        }
+
         @Override
         public BakedModel bake(IGeometryBakingContext context, ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelState, ItemOverrides overrides, ResourceLocation modelLocation) {
-            return new ScreenBaker(modelState, spriteGetter, overrides, context.getTransforms());
+            return new ScreenBaker(modelState, spriteGetter, overrides, context.getTransforms(), defaultPiece);
         }
         
 //        @Override

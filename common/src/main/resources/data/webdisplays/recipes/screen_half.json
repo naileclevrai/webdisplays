@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "webdisplays:screen"
+    }
+  ],
+  "result": {
+    "item": "webdisplays:screen_half",
+    "count": 2
+  }
+}

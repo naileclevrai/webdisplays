@@ -1,6 +1,8 @@
 {
     "itemGroup.webdisplays": "§5Web Displays",
     "block.webdisplays.screen": "Ecran",
+    "block.webdisplays.screen_half": "Demi-ecran",
+    "block.webdisplays.screen_triangle": "Ecran triangulaire",
     "block.webdisplays.peripheral": "Périphérique",
     "block.webdisplays.kb_left": "Clavier",
     "block.webdisplays.rctrl": "Télécommande",

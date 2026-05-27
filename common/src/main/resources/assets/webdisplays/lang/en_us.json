@@ -1,6 +1,8 @@
 {
   "itemGroup.webdisplays": "§5Web Displays",
   "block.webdisplays.screen": "Web Screen",
+  "block.webdisplays.screen_half": "Half Web Screen",
+  "block.webdisplays.screen_triangle": "Triangle Web Screen",
   "block.webdisplays.peripheral": "Peripheral",
   "block.webdisplays.kb_left": "Keyboard",
   "block.webdisplays.rctrl": "Remote Controller",

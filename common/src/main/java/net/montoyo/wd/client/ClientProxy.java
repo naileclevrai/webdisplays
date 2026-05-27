@@ -89,6 +89,7 @@ import net.montoyo.wd.registry.ItemRegistry;
 import net.montoyo.wd.registry.TileRegistry;
 import net.montoyo.wd.utilities.Log;
 import net.montoyo.wd.utilities.Multiblock;
+import net.montoyo.wd.utilities.ScreenBlocks;
 import net.montoyo.wd.utilities.ScreenShape;
 import net.montoyo.wd.utilities.browser.WDBrowser;
 import net.montoyo.wd.utilities.browser.handlers.DisplayHandler;
@@ -163,7 +164,7 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 		
 		BlockPos bpos = result.getBlockPos();
 		
-		if (result.getType() != HitResult.Type.BLOCK || mc.level.getBlockState(bpos).getBlock() != BlockRegistry.SCREEN_BLOCk.get()) {
+		if (result.getType() != HitResult.Type.BLOCK || !ScreenBlocks.isScreen(mc.level.getBlockState(bpos))) {
 			RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ONE_MINUS_DST_COLOR, GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
 
 			poseStack.blit(new ResourceLocation(
@@ -335,7 +336,14 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 		MCEF.getClient().getHandle().addMessageRouter(CefMessageRouter.create(WDRouter.INSTANCE));
 
 		// Register audio handler for volume control and 3D positional audio
-		MCEF.getClient().addAudioHandler(new net.montoyo.wd.client.audio.WebDisplaysAudioHandler());
+		net.montoyo.wd.client.audio.WebDisplaysAudioHandler audioHandler =
+				new net.montoyo.wd.client.audio.WebDisplaysAudioHandler();
+		try {
+			MCEF.getClient().addAudioHandler(audioHandler);
+		} catch (NoSuchMethodError e) {
+			// Published MCEF 2.1.6 jars lack MCEFClient.addAudioHandler; register on CefClient instead
+			MCEF.getClient().getHandle().addAudioHandler(audioHandler);
+		}
 
 		findAdvancementToProgressField();
 	}

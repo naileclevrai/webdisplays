@@ -19,7 +19,9 @@ import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.client.model.data.ModelProperty;
+import net.montoyo.wd.block.ScreenBlock;
 import net.montoyo.wd.utilities.data.BlockSide;
+import net.montoyo.wd.utilities.data.ScreenPieceType;
 import net.montoyo.wd.utilities.math.Vector3f;
 import net.montoyo.wd.utilities.math.Vector3i;
 import org.jetbrains.annotations.NotNull;
@@ -40,14 +42,16 @@ public class ScreenBaker implements BakedModel {
 	private final Function<net.minecraft.client.resources.model.Material, TextureAtlasSprite> spriteGetter;
 	private final ItemOverrides overrides;
 	private final ItemTransforms itemTransforms;
+	private final ScreenPieceType defaultPiece;
 	
 	IntegerModelProperty[] TEXTURES = new IntegerModelProperty[6];
 	
-	public ScreenBaker(ModelState modelState, Function<net.minecraft.client.resources.model.Material, TextureAtlasSprite> spriteGetter, ItemOverrides overrides, ItemTransforms itemTransforms) {
+	public ScreenBaker(ModelState modelState, Function<net.minecraft.client.resources.model.Material, TextureAtlasSprite> spriteGetter, ItemOverrides overrides, ItemTransforms itemTransforms, ScreenPieceType defaultPiece) {
 		this.modelState = modelState;
 		this.spriteGetter = spriteGetter;
 		this.overrides = overrides;
 		this.itemTransforms = itemTransforms;
+		this.defaultPiece = defaultPiece;
 		
 		for (int i = 0; i < texs.length; i++) {
 			texs[i] = spriteGetter.apply(ScreenModelLoader.MATERIALS_SIDES[i]);
@@ -119,6 +123,92 @@ public class ScreenBaker implements BakedModel {
 		
 		return new BakedQuad(data, 0xFFFFFFFF, blockFacings[side.ordinal()].getOpposite(), tex, true);
 	}
+
+	private BakedQuad bakeTriangle(BlockSide side, TextureAtlasSprite tex,
+	                               float x0, float z0, float x1, float z1, float x2, float z2) {
+		int[] data = new int[8 * 4];
+		putLocalVertex(data, 0, side, tex, x0, z0);
+		putLocalVertex(data, 1, side, tex, x1, z1);
+		putLocalVertex(data, 2, side, tex, x2, z2);
+		putLocalVertex(data, 3, side, tex, x2, z2);
+
+		return new BakedQuad(data, 0xFFFFFFFF, blockFacings[side.ordinal()].getOpposite(), tex, true);
+	}
+
+	private void putLocalVertex(int[] data, int slot, BlockSide side, TextureAtlasSprite tex, float localX, float localZ) {
+		putVertex(data, slot,
+				rotateVec(new Vector3f(localX, 0.0f, localZ), side),
+				tex,
+				rotateTex(side, 16.0f * (1.0f - localX), 16.0f * localZ),
+				side.backward);
+	}
+
+	private List<BakedQuad> bakeShapedSide(BlockSide side, TextureAtlasSprite tex, ScreenPieceType piece) {
+		if (piece == ScreenPieceType.FULL) {
+			return List.of(bakeSide(side, tex));
+		}
+
+		List<BakedQuad> quads = new ArrayList<>();
+		float x0 = 0.0f;
+		float x1 = 1.0f;
+		float y0 = 0.0f;
+		float y1 = 1.0f;
+		float xm = 0.5f;
+		float ym = 0.5f;
+
+		switch (piece) {
+			case HALF_BOTTOM -> {
+				quads.add(bakeTriangle(side, tex, x0, y0, x1, y0, x1, ym));
+				quads.add(bakeTriangle(side, tex, x0, y0, x1, ym, x0, ym));
+			}
+			case HALF_TOP -> {
+				quads.add(bakeTriangle(side, tex, x0, ym, x1, ym, x1, y1));
+				quads.add(bakeTriangle(side, tex, x0, ym, x1, y1, x0, y1));
+			}
+			case HALF_LEFT -> {
+				quads.add(bakeTriangle(side, tex, x0, y0, xm, y0, xm, y1));
+				quads.add(bakeTriangle(side, tex, x0, y0, xm, y1, x0, y1));
+			}
+			case HALF_RIGHT -> {
+				quads.add(bakeTriangle(side, tex, xm, y0, x1, y0, x1, y1));
+				quads.add(bakeTriangle(side, tex, xm, y0, x1, y1, xm, y1));
+			}
+			case TRIANGLE_SW -> quads.add(bakeTriangle(side, tex, x0, y0, x1, y0, x0, y1));
+			case TRIANGLE_SE -> quads.add(bakeTriangle(side, tex, x1, y0, x1, y1, x0, y0));
+			case TRIANGLE_NW -> quads.add(bakeTriangle(side, tex, x0, y1, x0, y0, x1, y1));
+			case TRIANGLE_NE -> quads.add(bakeTriangle(side, tex, x1, y1, x0, y1, x1, y0));
+			default -> quads.add(bakeSide(side, tex));
+		}
+
+		return quads;
+	}
+
+	private ScreenPieceType resolvePiece(@Nullable BlockState state) {
+		if (state != null && state.hasProperty(ScreenBlock.piece)) {
+			return state.getValue(ScreenBlock.piece);
+		}
+		return defaultPiece;
+	}
+
+	private Direction resolveFacing(@Nullable BlockState state) {
+		if (state != null && state.hasProperty(ScreenBlock.FACING)) {
+			return state.getValue(ScreenBlock.FACING);
+		}
+		return Direction.NORTH;
+	}
+
+	private boolean shouldUseShapedFace(@Nullable BlockState state, @Nullable Direction face) {
+		if (face == null) {
+			return false;
+		}
+
+		ScreenPieceType piece = resolvePiece(state);
+		if (piece == ScreenPieceType.FULL) {
+			return false;
+		}
+
+		return face == resolveFacing(state);
+	}
 	
 	@Override
 	public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource random) {
@@ -137,7 +227,11 @@ public class ScreenBaker implements BakedModel {
 		TextureAtlasSprite tex = texs[15];
 		if (data.has(TEXTURES[side.ordinal()]))
 			tex = texs[data.get(TEXTURES[side.ordinal()])];
-		ret.add(bakeSide(s, tex));
+		if (shouldUseShapedFace(state, side)) {
+			ret.addAll(bakeShapedSide(s, tex, resolvePiece(state)));
+		} else {
+			ret.add(bakeSide(s, tex));
+		}
 		return ret;
 	}
 	
