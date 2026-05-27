@@ -15,6 +15,7 @@ import net.montoyo.wd.WebDisplays;
 import net.montoyo.wd.client.ClientProxy;
 import net.montoyo.wd.client.gui.controls.Button;
 import net.montoyo.wd.client.gui.controls.CheckBox;
+import net.montoyo.wd.client.gui.controls.Label;
 import net.montoyo.wd.client.gui.controls.TextField;
 import net.montoyo.wd.client.gui.loading.FillControl;
 import net.montoyo.wd.controls.builtin.ScreenModifyControl;
@@ -30,6 +31,7 @@ import net.montoyo.wd.net.server_bound.C2SMessageScreenCtrl;
 import net.montoyo.wd.utilities.data.BlockSide;
 import net.montoyo.wd.utilities.data.ScreenLinkMode;
 import net.montoyo.wd.utilities.data.ScreenShapeMode;
+import net.montoyo.wd.utilities.link.LinkedScreenHelper;
 import net.montoyo.wd.utilities.serialization.Util;
 import net.montoyo.wd.utilities.math.Vector3i;
 
@@ -40,16 +42,13 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(Dist.CLIENT)
 public class GuiSetURL2 extends WDScreen {
 	
-	//Screen data
 	private ScreenBlockEntity tileEntity;
 	private BlockSide screenSide;
 	private Vector3i remoteLocation;
 	
-	//Pad data
 	private ItemStack stack;
 	private final boolean isPad;
 	
-	//Common
 	private final String screenURL;
 	private ScreenShapeMode shapeMode = ScreenShapeMode.NONE;
 	private ScreenLinkMode linkMode = ScreenLinkMode.JOINED;
@@ -67,9 +66,20 @@ public class GuiSetURL2 extends WDScreen {
 	@FillControl
 	private Button btnShapeMode;
 
+	@FillControl
+	private Label lblLinkSection;
+
+	@FillControl
+	private Label lblLinkRole;
+
+	@FillControl
+	private Label lblLinkHelp;
 
 	@FillControl
 	private TextField tfLinkId;
+
+	@FillControl
+	private Button btnLinkAuto;
 
 	@FillControl
 	private Button btnLink;
@@ -111,23 +121,67 @@ public class GuiSetURL2 extends WDScreen {
 		loadFrom(new ResourceLocation("webdisplays", "gui/seturl.json"));
 		tfURL.setText(screenURL);
 
-		// Initialize volume controls for screens (not pads)
 		if (!isPad && tileEntity != null) {
 			ScreenData screen = tileEntity.getScreen(screenSide);
 			if (screen != null) {
-				tfVolume.setText(String.valueOf((int) screen.volume));
-				cbAutoVolume.setChecked(screen.autoVolume);
 				shapeMode = screen.shapeMode;
 				linkMode = screen.linkMode == null ? ScreenLinkMode.JOINED : screen.linkMode;
 				linkDesired = screen.isLinked();
 				if (tfLinkId != null)
 					tfLinkId.setText(screen.linkId == null ? "" : screen.linkId);
-				if (screen.isLinked() && !screen.linkOrigin)
-					tfURL.setDisabled(true);
 				updateShapeModeStr();
 				updateLinkLabels();
+				refreshLinkedUi(screen);
 			}
 		}
+	}
+
+	private void refreshLinkedUi(ScreenData screen) {
+		if (screen == null)
+			return;
+
+		boolean isSlave = LinkedScreenHelper.isLinkedSlave(screen);
+		ScreenData settings = screen;
+		if (WebDisplays.PROXY instanceof ClientProxy proxy)
+			settings = LinkedScreenHelper.getOriginScreen(proxy, tileEntity, screen);
+		if (settings == null)
+			settings = screen;
+
+		tfURL.setText(settings.url != null ? settings.url : screenURL);
+		tfURL.setDisabled(isSlave);
+
+		tfVolume.setText(String.valueOf((int) settings.volume));
+		tfVolume.setDisabled(isSlave);
+		cbAutoVolume.setChecked(settings.autoVolume);
+		cbAutoVolume.setDisabled(isSlave);
+
+		if (lblLinkRole != null) {
+			if (!screen.isLinked())
+				lblLinkRole.setLabel(I18n.get("webdisplays.gui.seturl.linkrole.standalone"));
+			else if (screen.linkOrigin)
+				lblLinkRole.setLabel(I18n.get("webdisplays.gui.seturl.linkrole.origin"));
+			else
+				lblLinkRole.setLabel(I18n.get("webdisplays.gui.seturl.linkrole.slave"));
+			lblLinkRole.setColor(isSlave ? 0xFFAAAAAA : (screen.linkOrigin ? 0xFF55FF55 : 0xFFFFFFFF));
+		}
+
+		if (lblLinkHelp != null) {
+			if (isSlave)
+				lblLinkHelp.setLabel(I18n.get("webdisplays.gui.seturl.linkhelp.slave"));
+			else if (screen.isLinked() && screen.linkOrigin)
+				lblLinkHelp.setLabel(I18n.get("webdisplays.gui.seturl.linkhelp.origin"));
+			else
+				lblLinkHelp.setLabel(I18n.get("webdisplays.gui.seturl.linkhelp.standalone"));
+		}
+
+		if (btnLinkAuto != null)
+			btnLinkAuto.setDisabled(isSlave);
+		if (btnLink != null)
+			btnLink.setDisabled(isSlave);
+		if (btnLinkMode != null)
+			btnLinkMode.setDisabled(isSlave);
+		if (tfLinkId != null)
+			tfLinkId.setDisabled(isSlave);
 	}
 
 	private void updateShapeModeStr() {
@@ -173,6 +227,14 @@ public class GuiSetURL2 extends WDScreen {
 			if (tileEntity != null)
 				tileEntity.setShapeMode(screenSide, shapeMode);
 			WDNetworkRegistry.INSTANCE.sendToServer(new C2SMessageScreenCtrl(tileEntity, screenSide, new ScreenModifyControl(shapeMode)));
+		}
+		else if (ev.getSource() == btnLinkAuto) {
+			if (!isPad && tfLinkId != null) {
+				String generated = "wd-" + UUID.randomUUID().toString().substring(0, 8);
+				tfLinkId.setText(generated);
+				linkDesired = true;
+				updateLinkLabels();
+			}
 		}
 		else if (ev.getSource() == btnLink) {
 			if (!isPad && tfLinkId != null) {
@@ -227,7 +289,6 @@ public class GuiSetURL2 extends WDScreen {
 			}
 
 			url = Util.addProtocol(url);
-//			url = ((ClientProxy) WebDisplays.PROXY).getMCEF().punycode(url);
 
 			if (isPad) {
 				UUID uuid = getUUID();
@@ -240,15 +301,19 @@ public class GuiSetURL2 extends WDScreen {
 					pd.view.loadURL(WebDisplays.applyBlacklist(url));
 				}
 			} else {
-				// Only send URL if it changed
 				ScreenData screen = tileEntity.getScreen(screenSide);
-				boolean canChangeUrl = screen != null && (!screen.isLinked() || screen.linkOrigin);
+				if (screen == null) {
+					minecraft.setScreen(null);
+					return;
+				}
+
+				boolean isSlave = LinkedScreenHelper.isLinkedSlave(screen);
+				boolean canChangeUrl = !isSlave && (!screen.isLinked() || screen.linkOrigin);
 				if (canChangeUrl && !url.equals(screenURL)) {
 					WDNetworkRegistry.INSTANCE.sendToServer(C2SMessageScreenCtrl.setURL(tileEntity, screenSide, url, remoteLocation));
 				}
 
-				// Send volume settings for screens
-				if (screen != null) {
+				if (!isSlave) {
 					float volume = 100.0f;
 					boolean autoVolume = true;
 
@@ -261,7 +326,6 @@ public class GuiSetURL2 extends WDScreen {
 
 					autoVolume = cbAutoVolume.isChecked();
 
-					// Only send volume if it changed
 					if (volume != screen.volume || autoVolume != screen.autoVolume) {
 						WDNetworkRegistry.INSTANCE.sendToServer(new C2SMessageScreenCtrl(
 							tileEntity,

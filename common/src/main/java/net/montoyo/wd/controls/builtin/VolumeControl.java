@@ -48,6 +48,10 @@ public class VolumeControl extends ScreenControl {
 			Log.error("Trying to set volume on invalid screen (side %s)", side.toString());
 			return;
 		}
+		if (net.montoyo.wd.utilities.link.LinkedScreenHelper.isLinkedSlave(scr)) {
+			Log.warning("Blocked volume change on linked slave screen at %s (%s)", tes.getBlockPos().toString(), side.toString());
+			return;
+		}
 
 		scr.volume = Math.max(0, Math.min(100, volume));
 		scr.autoVolume = autoVolume;
@@ -59,6 +63,10 @@ public class VolumeControl extends ScreenControl {
 			),
 			net.montoyo.wd.net.client_bound.S2CMessageScreenUpdate.volume(tes, side, volume, autoVolume)
 		);
+
+		if (scr.isLinked() && scr.linkOrigin)
+			net.montoyo.wd.utilities.link.LinkedScreenHelper.propagateVolumeFromOrigin(
+					tes.getLevel(), tes, scr, scr.volume, scr.autoVolume);
 
 		tes.setChanged();
 	}

@@ -133,38 +133,32 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 		for (int i = 0; i < te.screenCount(); i++) {
 			ScreenData scr = te.getScreen(i);
 			if (scr.browser == null) {
-				if (scr.isLinked() && WebDisplays.PROXY instanceof ClientProxy proxy) {
-					LinkedScreenGroup group = proxy.getLinkedGroup(te, scr);
-					if (group != null) {
-						LinkedScreenGroup.Entry origin = group.getOrigin();
-						if (origin != null && origin.screen == scr) {
+				if (WebDisplays.PROXY instanceof ClientProxy proxy) {
+					if (scr.isLinked()) {
+						LinkedScreenGroup group = proxy.getLinkedGroup(te, scr);
+						if (group != null) {
+							group.ensureGroupBrowser(proxy);
+						} else if (scr.linkOrigin) {
 							double dist = WebDisplays.PROXY.distanceTo(te, Minecraft.getInstance().getEntityRenderDispatcher().camera.getPosition());
 							if (dist <= WebDisplays.INSTANCE.loadDistance2 * 16)
 								scr.createBrowser(te, true);
 							else
 								continue;
-						} else if (origin != null && origin.screen != null && origin.screen.browser != null) {
-							scr.browser = origin.screen.browser;
 						} else {
 							continue;
 						}
 					} else {
-						if (scr.linkOrigin) {
-							double dist = WebDisplays.PROXY.distanceTo(te, Minecraft.getInstance().getEntityRenderDispatcher().camera.getPosition());
-							if (dist <= WebDisplays.INSTANCE.loadDistance2 * 16)
-								scr.createBrowser(te, true);
-							else
-								continue;
-						} else {
+						double dist = WebDisplays.PROXY.distanceTo(te, Minecraft.getInstance().getEntityRenderDispatcher().camera.getPosition());
+						if (dist <= WebDisplays.INSTANCE.loadDistance2 * 16)
+							scr.createBrowser(te, true);
+						else
 							continue;
-						}
 					}
 				} else {
-					double dist = WebDisplays.PROXY.distanceTo(te, Minecraft.getInstance().getEntityRenderDispatcher().camera.getPosition());
-					if (dist <= WebDisplays.INSTANCE.loadDistance2 * 16)
-						scr.createBrowser(te, true);
-					else continue;
+					continue;
 				}
+				if (scr.browser == null)
+					continue;
 			}
 
 			// TODO: manually backface cull the screens
@@ -525,6 +519,24 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 				}
 			}
 			tesselator.end();
+
+			if (scr.isLinked()) {
+				RenderSystem.setShader(GameRenderer::getPositionColorShader);
+				builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+				float badge = Math.min(unitX, unitY) * 0.18f;
+				float bx0 = -sw;
+				float by0 = sh - badge;
+				float bx1 = bx0 + badge;
+				float by1 = sh;
+				float r = scr.linkOrigin ? 0.2f : 0.55f;
+				float g = scr.linkOrigin ? 0.95f : 0.55f;
+				float b = scr.linkOrigin ? 0.35f : 0.55f;
+				builder.vertex(poseStack.last().pose(), bx0, by0, 0.506f).color(r, g, b, 0.95f).endVertex();
+				builder.vertex(poseStack.last().pose(), bx1, by0, 0.506f).color(r, g, b, 0.95f).endVertex();
+				builder.vertex(poseStack.last().pose(), bx1, by1, 0.506f).color(r, g, b, 0.95f).endVertex();
+				builder.vertex(poseStack.last().pose(), bx0, by1, 0.506f).color(r, g, b, 0.95f).endVertex();
+				tesselator.end();
+			}
 
 			if (scr.shapeMode != null && scr.shapeMode != ScreenShapeMode.NONE) {
 				if (scr.shapeMode == ScreenShapeMode.SMOOTH_ONE && shape.smoothMask != null) {

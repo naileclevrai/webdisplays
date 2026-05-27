@@ -46,29 +46,53 @@ public final class LinkedScreenGroupManager {
     }
 
     private final HashMap<LinkedScreenKey, LinkedScreenGroup> groups = new HashMap<>();
+    private boolean dirty = true;
 
+    /** Marque les groupes comme devant être recalculés au prochain tick. */
+    public void markDirty() {
+        dirty = true;
+    }
+
+    /**
+     * Reconstruit les groupes uniquement si un changement a été signalé,
+     * puis resynchronise les browsers.
+     * En dehors des changements structurels, on ne fait que syncBrowsers (léger).
+     */
     public void rebuild(ClientProxy proxy) {
-        groups.clear();
-        for (ScreenBlockEntity be : proxy.getScreens()) {
-            if (be.getLevel() == null)
-                continue;
-
-            ResourceLocation dimension = be.getLevel().dimension().location();
-            for (int i = 0; i < be.screenCount(); i++) {
-                ScreenData scr = be.getScreen(i);
-                if (scr == null || !scr.isLinked())
+        if (dirty) {
+            dirty = false;
+            groups.clear();
+            for (ScreenBlockEntity be : proxy.getScreens()) {
+                if (be.getLevel() == null)
                     continue;
 
-                LinkedScreenKey key = new LinkedScreenKey(scr.linkId, dimension, scr.side, scr.rotation);
-                LinkedScreenGroup group = groups.computeIfAbsent(key, LinkedScreenGroup::new);
-                group.add(be, scr);
+                ResourceLocation dimension = be.getLevel().dimension().location();
+                for (int i = 0; i < be.screenCount(); i++) {
+                    ScreenData scr = be.getScreen(i);
+                    if (scr == null || !scr.isLinked())
+                        continue;
+
+                    LinkedScreenKey key = new LinkedScreenKey(scr.linkId, dimension, scr.side, scr.rotation);
+                    LinkedScreenGroup group = groups.computeIfAbsent(key, LinkedScreenGroup::new);
+                    group.add(be, scr);
+                }
             }
+
+            for (LinkedScreenGroup group : groups.values()) {
+                group.buildLayout();
+            }
+            markAllGroupsNeedBrowserSync();
         }
 
+        // Sync browsers à chaque tick (léger : propagation de ref)
         for (LinkedScreenGroup group : groups.values()) {
-            group.buildLayout();
-            group.syncBrowsers(proxy);
+            group.syncBrowsersIfNeeded(proxy);
         }
+    }
+
+    public void markAllGroupsNeedBrowserSync() {
+        for (LinkedScreenGroup group : groups.values())
+            group.markNeedsBrowserSync();
     }
 
     public LinkedScreenGroup getGroup(ScreenBlockEntity be, ScreenData scr) {

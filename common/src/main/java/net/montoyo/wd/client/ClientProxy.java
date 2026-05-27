@@ -218,6 +218,11 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 		return linkedScreenGroups.getGroup(be, scr);
 	}
 
+	/** Appelé quand un link change côté client : force un rebuild à la prochaine frame. */
+	public void notifyLinkChanged() {
+		linkedScreenGroups.markDirty();
+	}
+
 	public void updateCursorForBrowser(CefBrowser browser, int cursorType) {
 		for (ScreenBlockEntity tes : screenTracking) {
 			for (int i = 0; i < tes.screenCount(); i++) {
@@ -290,9 +295,6 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 	private final ArrayList<PadData> padList = new ArrayList<>();
 	private int minePadTickCounter = 0;
 	private final AmbilightController ambilightController = new AmbilightController();
-
-	//Synced browser cleanup
-	private int syncedBrowserCleanupCounter = 0;
 	
 	/**************************************** INHERITED METHODS ****************************************/
 	@SubscribeEvent
@@ -429,10 +431,14 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 		}
 		
 		if (track) {
-			if (idx < 0)
+			if (idx < 0) {
 				screenTracking.add(tes);
-		} else if (idx >= 0)
+				linkedScreenGroups.markDirty();
+			}
+		} else if (idx >= 0) {
 			screenTracking.remove(idx);
+			linkedScreenGroups.markDirty();
+		}
 	}
 	
 	@Override
@@ -623,20 +629,6 @@ public void forceDisableScreen(BlockPos pos, BlockSide side) {
             tes.disableScreen(side);
         }
 
-        // Kill browser if this is not the origin screen
-        for (int i = 0; i < tes.screenCount(); i++) {
-            ScreenData scr = tes.getScreen(i);
-            if (scr == null || scr.browser == null)
-                continue;
-
-            LinkedScreenGroup group = linkedScreenGroups.getGroup(tes, scr);
-            LinkedScreenGroup.Entry origin = group != null ? group.getOrigin() : null;
-            if (origin == null || origin.screen != scr) {
-                scr.browser.close(true);
-                scr.browser = null;
-            }
-        }
-
         if (tes.screenCount() == 0)
             it.remove();
         return;
@@ -679,6 +671,7 @@ public void forceDisableScreen(BlockPos pos, BlockSide side) {
 			}
 		}
 
+		linkedScreenGroups.markDirty();
 		linkedScreenGroups.rebuild(this);
 		for (LinkedScreenGroup group : linkedScreenGroups.getGroups()) {
 			if (group.getOrigin() == null)
@@ -794,12 +787,6 @@ public void forceDisableScreen(BlockPos pos, BlockSide side) {
 
 		linkedScreenGroups.rebuild(this);
 
-		// Periodic cleanup of synced browsers (every 600 ticks ~30 seconds at 20 TPS)
-		if (++syncedBrowserCleanupCounter >= 600) {
-			syncedBrowserCleanupCounter = 0;
-			cleanupSyncedBrowsers();
-		}
-
 		// Update browser volumes for OS playback path
 		net.montoyo.wd.client.audio.BrowserVolumeManager.updateAllBrowserVolumes();
 		ambilightController.tick(screenTracking, this);
@@ -885,27 +872,6 @@ public void forceDisableScreen(BlockPos pos, BlockSide side) {
 		}
 	}
 
-	private void cleanupSyncedBrowsers() {
-		for (ScreenBlockEntity tes : screenTracking) {
-			for (int i = 0; i < tes.screenCount(); i++) {
-				ScreenData scr = tes.getScreen(i);
-				if (scr == null || !scr.isLinked() || scr.linkOrigin)
-					continue;
-
-				LinkedScreenGroup group = linkedScreenGroups.getGroup(tes, scr);
-				LinkedScreenGroup.Entry origin = group != null ? group.getOrigin() : null;
-				if (origin == null || origin.screen == null || origin.screen.browser == null)
-					continue;
-
-				if (scr.browser != origin.screen.browser) {
-					if (scr.browser != null)
-						scr.releaseBrowser(tes);
-					scr.browser = origin.screen.browser;
-				}
-			}
-		}
-	}
-	
 	@SubscribeEvent
 	public void onRenderPlayerHand(RenderHandEvent ev) {
 		Item item = ev.getItemStack().getItem();
@@ -950,6 +916,7 @@ public void forceDisableScreen(BlockPos pos, BlockSide side) {
 	private void cleanupAllBrowsers() {
 		ambilightController.clear();
 		linkedScreenGroups.clear();
+		net.montoyo.wd.client.audio.BrowserVolumeManager.clearCache();
 
 		for (ScreenBlockEntity tes : screenTracking) {
 			for (int i = 0; i < tes.screenCount(); i++) {

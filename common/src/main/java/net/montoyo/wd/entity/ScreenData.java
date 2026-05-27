@@ -13,6 +13,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.montoyo.wd.WebDisplays;
 import net.montoyo.wd.client.ClientProxy;
+import net.montoyo.wd.client.link.LinkedScreenGroup;
 import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.config.CommonConfig;
 import net.montoyo.wd.core.ScreenRights;
@@ -56,6 +57,11 @@ public class ScreenData {
     public boolean linkOrigin = false;
 
     public int mouseType;
+
+    public void applyUrl(String newUrl) {
+        url = newUrl;
+        videoType = VideoType.getTypeFromURL(url);
+    }
 
     public static ScreenData deserialize(CompoundTag tag) {
         ScreenData ret = new ScreenData();
@@ -328,22 +334,17 @@ public class ScreenData {
             mcefBrowser.resize(effective.x, effective.y);
     }
 
+    public void ensureStandaloneBrowser(ScreenBlockEntity be, boolean doAnim) {
+        if (browser == null)
+            createStandaloneBrowser(be, doAnim);
+    }
+
     public void createBrowser(ScreenBlockEntity be, boolean doAnim) {
         if (WebDisplays.PROXY instanceof ClientProxy proxy) {
             if (isLinked()) {
-                net.montoyo.wd.client.link.LinkedScreenGroup group = proxy.getLinkedGroup(be, this);
-                if (group != null && group.getOrigin() != null) {
-                    ScreenData origin = group.getOrigin().screen;
-                    if (origin.browser == null) {
-                        origin.createStandaloneBrowser(group.getOrigin().blockEntity, doAnim);
-                    }
-
-                    browser = origin.browser;
-                    if (browser instanceof MCEFBrowser mcefBrowser) {
-                        group.resizeBrowser(mcefBrowser);
-                        mcefBrowser.setCursorChangeListener((type) -> proxy.updateCursorForBrowser(mcefBrowser, type));
-                    }
-
+                LinkedScreenGroup group = proxy.getLinkedGroup(be, this);
+                if (group != null) {
+                    group.ensureGroupBrowser(proxy);
                     doTurnOnAnim = doAnim;
                     turnOnTime = System.currentTimeMillis();
                     return;
@@ -397,19 +398,19 @@ public class ScreenData {
                 if (group != null && group.getOrigin() != null) {
                     ScreenData origin = group.getOrigin().screen;
                     if (origin != null && origin != this) {
-                        if (origin.browser == browser) {
-                            browser = null;
-                            return;
-                        }
+                        browser = null;
+                        return;
                     } else if (origin == this) {
-                        group.clearBrowserRefs();
+                        group.onOriginDestroyed(proxy);
                     }
                 }
             }
 
+            net.montoyo.wd.client.audio.BrowserVolumeManager.silenceBrowser(browser);
             Object screenId = be.getBlockPos().toString() + "_" + side.toString();
             WDBrowser.releaseBrowser(browser, screenId);
             browser = null;
+            proxy.notifyLinkChanged();
         }
     }
 }

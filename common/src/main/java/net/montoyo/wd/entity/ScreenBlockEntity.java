@@ -312,6 +312,8 @@ public class ScreenBlockEntity extends BlockEntity {
                 scr.browser.loadURL(weburl);
         } else {
             WDNetworkRegistry.INSTANCE.send(PacketDistributor.NEAR.with(() -> point(level, getBlockPos())), S2CMessageScreenUpdate.setURL(this, side, weburl));
+            if (scr.isLinked() && scr.linkOrigin)
+                net.montoyo.wd.utilities.link.LinkedScreenHelper.propagateUrlFromOrigin(level, this, scr, weburl);
             setChanged();
         }
     }
@@ -360,6 +362,10 @@ public class ScreenBlockEntity extends BlockEntity {
             Log.error("Tried to change resolution of non-existing screen on side %s", side.toString());
             return;
         }
+        if (net.montoyo.wd.utilities.link.LinkedScreenHelper.isLinkedSlave(scr)) {
+            Log.warning("Blocked resolution change on linked slave screen at %s (%s)", getBlockPos().toString(), side.toString());
+            return;
+        }
 
         scr.resolution = res;
         scr.clampResolution();
@@ -372,6 +378,8 @@ public class ScreenBlockEntity extends BlockEntity {
             }
         } else {
             WDNetworkRegistry.INSTANCE.send(PacketDistributor.NEAR.with(() -> point(level, getBlockPos())), S2CMessageScreenUpdate.setResolution(this, side, res));
+            if (scr.isLinked() && scr.linkOrigin)
+                net.montoyo.wd.utilities.link.LinkedScreenHelper.propagateResolutionFromOrigin(level, this, scr, scr.resolution);
             setChanged();
         }
     }
@@ -1076,6 +1084,14 @@ public class ScreenBlockEntity extends BlockEntity {
     }
 
     public void onDestroy(@Nullable Player ply) {
+        if (level != null && !level.isClientSide) {
+            for (ScreenData scr : screens) {
+                if (scr.isLinked() && scr.linkOrigin)
+                    net.montoyo.wd.utilities.link.LinkedScreenHelper.promoteNewOriginOnServer(
+                            level, getBlockPos(), scr, this, scr.side);
+            }
+        }
+
         for (ScreenData scr : screens) {
             scr.upgrades.forEach(is -> dropUpgrade(is, scr.side, ply));
             scr.upgrades.clear();
@@ -1185,8 +1201,15 @@ public class ScreenBlockEntity extends BlockEntity {
         scr.linkOrigin = origin && !newId.isEmpty();
 
         if (level.isClientSide) {
-            if (linkChanged && scr.browser != null)
-                scr.releaseBrowser(this);
+            if (linkChanged) {
+                if (scr.browser != null)
+                    scr.releaseBrowser(this);
+                if (net.montoyo.wd.WebDisplays.PROXY instanceof net.montoyo.wd.client.ClientProxy proxy)
+                    proxy.notifyLinkChanged();
+            } else {
+                if (net.montoyo.wd.WebDisplays.PROXY instanceof net.montoyo.wd.client.ClientProxy proxy)
+                    proxy.notifyLinkChanged();
+            }
         } else {
             WDNetworkRegistry.INSTANCE.send(PacketDistributor.NEAR.with(() -> point(level, getBlockPos())),
                 S2CMessageScreenUpdate.link(this, side, newId, newMode, scr.linkOrigin));

@@ -1,7 +1,9 @@
 package net.montoyo.wd.client.link;
 
 import com.cinemamod.mcef.MCEFBrowser;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.montoyo.wd.WebDisplays;
 import net.montoyo.wd.client.ClientProxy;
 import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.config.CommonConfig;
@@ -45,6 +47,7 @@ public final class LinkedScreenGroup {
     private Vector2i effectiveResolution = new Vector2i(1, 1);
     private int lastBrowserWidth = -1;
     private int lastBrowserHeight = -1;
+    private boolean needsBrowserSync = true;
 
     public LinkedScreenGroup(LinkedScreenGroupManager.LinkedScreenKey key) {
         this.key = key;
@@ -54,6 +57,10 @@ public final class LinkedScreenGroup {
         Entry entry = new Entry(blockEntity, screen);
         entries.add(entry);
         entryMap.put(screen, entry);
+    }
+
+    public void markNeedsBrowserSync() {
+        needsBrowserSync = true;
     }
 
     public void buildLayout() {
@@ -67,7 +74,7 @@ public final class LinkedScreenGroup {
         BlockSide side = key.side;
         for (Entry entry : entries) {
             BlockPos pos = entry.blockEntity.getBlockPos();
-            Vector3i origin = new Vector3i(pos);
+            Vector3i shapeOrigin = new Vector3i(pos);
             if (entry.blockEntity.getLevel() != null && CommonConfig.Screen.keepShapeOnChange) {
                 Vector3i found = ScreenShape.findConnectedOrigin(
                     entry.blockEntity.getLevel(),
@@ -77,10 +84,10 @@ public final class LinkedScreenGroup {
                     CommonConfig.Screen.maxScreenSizeY
                 );
                 if (found != null)
-                    origin = found;
+                    shapeOrigin = found;
             }
-            entry.rawX = origin.x * side.right.x + origin.y * side.right.y + origin.z * side.right.z;
-            entry.rawY = origin.x * side.up.x + origin.y * side.up.y + origin.z * side.up.z;
+            entry.rawX = shapeOrigin.x * side.right.x + shapeOrigin.y * side.right.y + shapeOrigin.z * side.right.z;
+            entry.rawY = shapeOrigin.x * side.up.x + shapeOrigin.y * side.up.y + shapeOrigin.z * side.up.z;
         }
 
         if (mode == ScreenLinkMode.SPACED) {
@@ -90,6 +97,7 @@ public final class LinkedScreenGroup {
         }
 
         computeResolution();
+        needsBrowserSync = true;
     }
 
     public Entry getEntry(ScreenData screen) {
@@ -194,6 +202,49 @@ public final class LinkedScreenGroup {
             entry.screen.mouseType = cursorType;
     }
 
+    /**
+     * Point d'entrée unique pour créer/emprunter le browser partagé du groupe.
+     */
+    public void ensureGroupBrowser(ClientProxy proxy) {
+        if (entries.isEmpty() || origin == null || origin.screen == null)
+            return;
+
+        ScreenData originScreen = origin.screen;
+        if (originScreen.browser == null) {
+            double dist = WebDisplays.PROXY.distanceTo(
+                    origin.blockEntity,
+                    Minecraft.getInstance().getEntityRenderDispatcher().camera.getPosition()
+            );
+            if (dist <= WebDisplays.INSTANCE.loadDistance2 * 16)
+                originScreen.ensureStandaloneBrowser(origin.blockEntity, true);
+        }
+
+        if (originScreen.browser == null)
+            return;
+
+        syncBrowsers(proxy);
+    }
+
+    public void syncBrowsersIfNeeded(ClientProxy proxy) {
+        if (!needsBrowserSync && browsersInSync())
+            return;
+        syncBrowsers(proxy);
+    }
+
+    private boolean browsersInSync() {
+        if (origin == null || origin.screen == null || origin.screen.browser == null)
+            return true;
+
+        org.cef.browser.CefBrowser shared = origin.screen.browser;
+        for (Entry entry : entries) {
+            if (entry.screen == null || entry.screen == origin.screen)
+                continue;
+            if (entry.screen.browser != shared)
+                return false;
+        }
+        return true;
+    }
+
     public void syncBrowsers(ClientProxy proxy) {
         if (entries.isEmpty() || origin == null)
             return;
@@ -203,23 +254,16 @@ public final class LinkedScreenGroup {
             return;
 
         if (originScreen.browser == null) {
-            for (Entry entry : entries) {
-                if (entry.screen != null && entry.screen.browser != null) {
-                    originScreen.browser = entry.screen.browser;
-                    break;
-                }
-            }
-        }
-
-        if (originScreen.browser == null)
+            needsBrowserSync = true;
             return;
+        }
 
         for (Entry entry : entries) {
             if (entry.screen == null || entry.screen == originScreen)
                 continue;
 
             if (entry.screen.browser != originScreen.browser) {
-                if (entry.screen.browser != null)
+                if (entry.screen.browser != null && entry.screen.browser != originScreen.browser)
                     entry.screen.releaseBrowser(entry.blockEntity);
                 entry.screen.browser = originScreen.browser;
             }
@@ -230,6 +274,46 @@ public final class LinkedScreenGroup {
                 mcefBrowser.setCursorChangeListener((type) -> proxy.updateCursorForBrowser(mcefBrowser, type));
             resizeBrowser(mcefBrowser);
         }
+
+        needsBrowserSync = false;
+    }
+
+    /**
+     * Appelé quand l'origin est détruit : retire les refs slaves et promeut un nouvel origin côté client.
+     */
+    public void onOriginDestroyed(ClientProxy proxy) {
+        ScreenData destroyedOrigin = origin != null ? origin.screen : null;
+        for (Entry entry : entries) {
+            if (entry.screen == null || entry.screen == destroyedOrigin)
+                continue;
+            entry.screen.browser = null;
+        }
+
+        promoteNewOriginClient(proxy, destroyedOrigin);
+    }
+
+    private void promoteNewOriginClient(ClientProxy proxy, ScreenData destroyedOrigin) {
+        List<Entry> remaining = new ArrayList<>();
+        for (Entry entry : entries) {
+            if (entry.screen == null || entry.screen == destroyedOrigin)
+                continue;
+            if (entry.blockEntity.getScreen(entry.screen.side) == null)
+                continue;
+            remaining.add(entry);
+        }
+
+        if (remaining.isEmpty())
+            return;
+
+        remaining.sort(Comparator.comparing((Entry e) -> e.blockEntity.getBlockPos(), LinkedScreenGroup::comparePos));
+        Entry newOriginEntry = remaining.get(0);
+        for (Entry entry : remaining)
+            entry.screen.linkOrigin = entry == newOriginEntry;
+
+        origin = newOriginEntry;
+        needsBrowserSync = true;
+        if (proxy != null)
+            proxy.notifyLinkChanged();
     }
 
     private Entry selectOrigin() {

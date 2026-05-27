@@ -8,13 +8,20 @@ import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.utilities.Log;
 import org.cef.browser.CefBrowser;
 
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Manages browser volume by injecting JavaScript to control HTML5 audio/video elements.
  * This is simpler than capturing audio and allows the OS to handle playback.
  */
 public class BrowserVolumeManager {
+    
+    private static final Map<Integer, Float> lastVolume = new HashMap<>();
+
+    private static final String SET_VOLUME_SCRIPT =
+        "window.currentWebDisplaysVolume = %s; if (window.setWebDisplaysVolume) window.setWebDisplaysVolume(%s);";
     
     private static final String VOLUME_CONTROL_SCRIPT =
         "(function() {" +
@@ -152,21 +159,42 @@ public class BrowserVolumeManager {
             Log.error("Failed to update browser volume: %s", e.getMessage());
         }
     }
+
+    /** Coupe immédiatement le son d'un browser avant sa fermeture. */
+    public static void silenceBrowser(CefBrowser browser) {
+        if (browser == null)
+            return;
+        setBrowserVolume(browser, 0.0f, true);
+        lastVolume.remove(browser.getIdentifier());
+    }
+
+    public static void clearCache() {
+        lastVolume.clear();
+    }
     
     /**
      * Set the volume of a browser directly.
      */
     public static void setBrowserVolume(CefBrowser browser, float volume) {
+        setBrowserVolume(browser, volume, false);
+    }
+
+    private static void setBrowserVolume(CefBrowser browser, float volume, boolean force) {
         if (browser == null) return;
         
-        // Clamp volume to [0, 1]
         volume = Math.max(0.0f, Math.min(1.0f, volume));
+        int id = browser.getIdentifier();
+
+        if (!force) {
+            Float previous = lastVolume.get(id);
+            if (previous != null && Math.abs(previous - volume) < 0.001f)
+                return;
+        }
+        lastVolume.put(id, volume);
         
         try {
             String volStr = String.format(Locale.ROOT, "%.3f", volume);
-            String script = VOLUME_CONTROL_SCRIPT +
-                "; window.currentWebDisplaysVolume = " + volStr + "; " +
-                "if (window.setWebDisplaysVolume) window.setWebDisplaysVolume(" + volStr + ");";
+            String script = String.format(Locale.ROOT, SET_VOLUME_SCRIPT, volStr, volStr);
             executeOnAllFrames(browser, script, "webdisplays://set-volume");
         } catch (Exception e) {
             Log.error("Failed to set browser volume: %s", e.getMessage());
@@ -231,21 +259,28 @@ public class BrowserVolumeManager {
      */
     public static void updateAllBrowserVolumes() {
         ClientProxy proxy = (ClientProxy) WebDisplays.PROXY;
-        java.util.HashMap<CefBrowser, Float> maxVolume = new java.util.HashMap<>();
+        HashMap<CefBrowser, Float> maxVolume = new HashMap<>();
         for (ScreenBlockEntity be : proxy.getScreens()) {
             for (int i = 0; i < be.screenCount(); i++) {
                 ScreenData screen = be.getScreen(i);
                 if (screen == null || screen.browser == null)
                     continue;
 
-                float volume = calculateVolume(screen, be);
+                ScreenData volumeSource = screen;
+                if (screen.isLinked() && !screen.linkOrigin) {
+                    ScreenData origin = net.montoyo.wd.utilities.link.LinkedScreenHelper.getOriginScreen(proxy, be, screen);
+                    if (origin != null)
+                        volumeSource = origin;
+                }
+
+                float volume = calculateVolume(volumeSource, be);
                 Float current = maxVolume.get(screen.browser);
                 if (current == null || volume > current)
                     maxVolume.put(screen.browser, volume);
             }
         }
 
-        for (java.util.Map.Entry<CefBrowser, Float> entry : maxVolume.entrySet())
+        for (Map.Entry<CefBrowser, Float> entry : maxVolume.entrySet())
             setBrowserVolume(entry.getKey(), entry.getValue());
     }
 }

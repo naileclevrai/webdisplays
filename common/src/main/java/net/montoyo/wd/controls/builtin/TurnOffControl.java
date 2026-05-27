@@ -44,5 +44,9 @@ public class TurnOffControl extends ScreenControl {
 				tes.disableScreen(value);
 			}
 		}
+		// Si plus aucun écran actif, on retire ce TE du tracking client
+		if (tes.screenCount() == 0) {
+			WebDisplays.PROXY.trackScreen(tes, false);
+		}
 	}
 }
