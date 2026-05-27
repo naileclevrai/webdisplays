@@ -124,6 +124,7 @@
   "webdisplays.extcard.cantcraft2": "Você VAI FALHAR ao craftar este item.",
   "webdisplays.extcard.bad": "Alguém falhou ao craftar um cartão de extensão",
   "webdisplays.gui.keyboard.hooked": "Teclado conectado. Pressione Esc para sair.",
+  "webdisplays.gui.keyboard.warning1": "AVISO! Os dados digitados são enviados em TEXTO PURO ao servidor.",
   "webdisplays.gui.keyboard.warning2": "Isso significa que qualquer um pode saber o que você está digitando.",
   "webdisplays.gui.keyboard.warning3": "NUNCA digite uma de suas senhas usando este teclado.",
   "webdisplays.gui.keyboard.gotcha": "Entendi",
