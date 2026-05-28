@@ -131,6 +131,13 @@ public final class LinkedScreenGroup {
         return diagonalLayout;
     }
 
+    public java.util.List<Entry> getEntriesSorted() {
+        java.util.List<Entry> sorted = new java.util.ArrayList<>(entries);
+        if (diagonalLayout)
+            sorted.sort(java.util.Comparator.comparingInt(e -> e.chainIndex));
+        return sorted;
+    }
+
     public Vector2i getResolution() {
         return resolution;
     }

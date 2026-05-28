@@ -73,6 +73,20 @@ public final class ScreenTestPatternRenderer {
         drawLabels(poseStack, bufferSource, font, packedLight, scr, sw, sh, groupOffset, diagonalLayout);
     }
 
+    public static void renderDiagonalCellPattern(BufferBuilder builder, PoseStack poseStack, ScreenPieceType piece,
+                                                   float z, float x0, float x1, float y0, float y1,
+                                                   float sw, float sh, float faceW, float faceH, float scanY,
+                                                   LinkedScreenGroup.Entry groupEntry, Vector2i groupSize,
+                                                   int cellX, int cellY) {
+        renderCellPattern(builder, poseStack, piece, z, x0, x1, y0, y1, sw, sh, faceW, faceH, scanY,
+                true, groupEntry, groupSize, cellX, cellY);
+    }
+
+    public static void renderDiagonalLabels(PoseStack poseStack, MultiBufferSource bufferSource, Font font,
+                                            int packedLight, ScreenData scr, float sw, float sh) {
+        drawLabels(poseStack, bufferSource, font, packedLight, scr, sw, sh, null, true);
+    }
+
     private static void renderCellPattern(BufferBuilder builder, PoseStack poseStack, ScreenPieceType piece,
                                           float z, float x0, float x1, float y0, float y1,
                                           float sw, float sh, float faceW, float faceH, float scanY,

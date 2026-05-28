@@ -72,7 +72,7 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 		addVertex(builder, poseStack, x2, y2, z, u2, v2);
 	}
 
-	private static void renderScreenCell(BufferBuilder builder, PoseStack poseStack, ScreenPieceType piece, float z,
+	static void renderScreenCell(BufferBuilder builder, PoseStack poseStack, ScreenPieceType piece, float z,
 	                                     float x0, float x1, float y0, float y1,
 	                                     float u0, float u1, float v0, float v1) {
 		float xm = (x0 + x1) * 0.5f;
@@ -227,6 +227,16 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 					continue;
 			}
 
+			LinkedScreenGroup earlyGroup = null;
+			if (scr.isLinked() && WebDisplays.PROXY instanceof ClientProxy earlyProxy)
+				earlyGroup = earlyProxy.getLinkedGroup(te, scr);
+			if (earlyGroup != null && earlyGroup.isDiagonalLayout()) {
+				if (!scr.linkOrigin)
+					continue;
+				DiagonalScreenRenderer.renderGroup(te, scr, earlyGroup, poseStack, bufferSource, packedLight, showTestPattern);
+				continue;
+			}
+
 			// TODO: manually backface cull the screens
 			Vector3i shapeOrigin = new Vector3i(te.getBlockPos());
 			if (CommonConfig.Screen.keepShapeOnChange) {
@@ -331,6 +341,7 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 					}
 				}
 			}
+			boolean diagonalLayout = group != null && group.isDiagonalLayout();
 			ScreenShapeMode renderShapeMode = scr.shapeMode;
 			int curvedEdgeMask = 0;
 			if (group != null && group.getOrigin() != null && group.getOrigin().screen != null)
@@ -342,7 +353,6 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 				curvedEdgeMask = 0;
 			if (groupEntry != null)
 				groupOffset.set(groupEntry.offset.x, groupEntry.offset.y, 0);
-			boolean diagonalLayout = group != null && group.isDiagonalLayout();
 			if (diagonalLayout)
 				curvedEdgeMask = 0;
 			float invWidth = 1.0f / Math.max(1, groupSize.x);
