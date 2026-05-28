@@ -16,8 +16,7 @@ public class TileRegistry {
             .register("screen", () -> BlockEntityType.Builder
                     .of(ScreenBlockEntity::new,
                             BlockRegistry.SCREEN_BLOCk.get(),
-                            BlockRegistry.SCREEN_HALF.get(),
-                            BlockRegistry.SCREEN_TRIANGLE.get()).build(null));
+                            BlockRegistry.LED_PANEL_2.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<?>> KEYBOARD = TILE_TYPES.register("kb_left", () -> BlockEntityType.Builder
             .of(KeyboardBlockEntity::new, BlockRegistry.KEYBOARD_BLOCK.get()).build(null));

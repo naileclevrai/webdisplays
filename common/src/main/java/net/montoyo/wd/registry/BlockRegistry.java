@@ -9,10 +9,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import net.montoyo.wd.block.KeyboardBlockLeft;
 import net.montoyo.wd.block.KeyboardBlockRight;
+import net.montoyo.wd.block.LedPanel2Block;
 import net.montoyo.wd.block.PeripheralBlock;
 import net.montoyo.wd.block.ScreenBlock;
 import net.montoyo.wd.core.DefaultPeripheral;
-import net.montoyo.wd.utilities.data.ScreenPieceType;
 
 public class BlockRegistry {
     public static void init(IEventBus bus) {
@@ -23,11 +23,8 @@ public class BlockRegistry {
 
     public static final RegistryObject<ScreenBlock> SCREEN_BLOCk = BLOCKS.register("screen", () -> new ScreenBlock(BlockBehaviour.Properties.copy(Blocks.STONE)));
 
-    public static final RegistryObject<ScreenBlock> SCREEN_HALF = BLOCKS.register("screen_half",
-            () -> new ScreenBlock(BlockBehaviour.Properties.copy(Blocks.STONE), ScreenBlock.ShapeCategory.HALF, ScreenPieceType.HALF_BOTTOM));
-
-    public static final RegistryObject<ScreenBlock> SCREEN_TRIANGLE = BLOCKS.register("screen_triangle",
-            () -> new ScreenBlock(BlockBehaviour.Properties.copy(Blocks.STONE), ScreenBlock.ShapeCategory.TRIANGLE, ScreenPieceType.TRIANGLE_SW));
+    public static final RegistryObject<LedPanel2Block> LED_PANEL_2 = BLOCKS.register("led_panel_2",
+            () -> new LedPanel2Block(BlockBehaviour.Properties.copy(Blocks.STONE).noOcclusion()));
 
     public static final RegistryObject<KeyboardBlockLeft> KEYBOARD_BLOCK = BlockRegistry.BLOCKS.register("kb_left", KeyboardBlockLeft::new);
     public static final RegistryObject<KeyboardBlockRight> blockKbRight = BLOCKS.register("kb_right", KeyboardBlockRight::new);

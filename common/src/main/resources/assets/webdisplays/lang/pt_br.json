@@ -1,8 +1,7 @@
 {
   "itemGroup.webdisplays": "§5Web Displays",
   "block.webdisplays.screen": "Tela Web",
-  "block.webdisplays.screen_half": "Meia Tela Web",
-  "block.webdisplays.screen_triangle": "Tela Web Triangular",
+  "block.webdisplays.led_panel_2": "LED Panel 2",
   "block.webdisplays.peripheral": "Periférico",
   "block.webdisplays.kb_left": "Teclado",
   "block.webdisplays.rctrl": "Controle Remoto",
@@ -84,6 +83,7 @@
   "webdisplays.gui.screencfg.shapemode.none": "Sem adaptação",
   "webdisplays.gui.screencfg.shapemode.smooth_one": "Suave (1 bloco)",
   "webdisplays.gui.screencfg.shapemode.smooth_long": "Suave (comprimento total)",
+  "webdisplays.gui.screencfg.shapemode.curved_corner": "Canto curvo (45°)",
   "webdisplays.gui.screencfg.autovol": "Volume Automático",
   "webdisplays.gui.screencfg.avwarning": "§cCuidado!\nO volume automático só funciona em vídeos\ndo YouTube, e se estiver ativado na config do cliente!",
   "webdisplays.gui.screencfg.volume": "Volume:",

@@ -28,7 +28,7 @@ plugins {
 }
 
 rootProject.name = 'webdisplays'
-include('common', 'forge', 'fabric')
+include('common', 'forge'/*, 'fabric'*/)
 
 gradle.beforeProject { p ->
     p.buildscript.configurations.classpath.resolutionStrategy.force "com.google.code.gson:gson:2.10.1"

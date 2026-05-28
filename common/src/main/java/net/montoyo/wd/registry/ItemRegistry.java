@@ -45,8 +45,7 @@ public class ItemRegistry {
     }
 
     public static final RegistryObject<Item> SCREEN = ITEMS.register("screen", () -> new BlockItem(BlockRegistry.SCREEN_BLOCk.get(), new Item.Properties()/*.tab(WebDisplays.CREATIVE_TAB)*/));
-    public static final RegistryObject<Item> SCREEN_HALF = ITEMS.register("screen_half", () -> new BlockItem(BlockRegistry.SCREEN_HALF.get(), new Item.Properties()));
-    public static final RegistryObject<Item> SCREEN_TRIANGLE = ITEMS.register("screen_triangle", () -> new BlockItem(BlockRegistry.SCREEN_TRIANGLE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LED_PANEL_2 = ITEMS.register("led_panel_2", () -> new BlockItem(BlockRegistry.LED_PANEL_2.get(), new Item.Properties()));
 
     public static final RegistryObject<Item> KEYBOARD = ITEMS.register("keyboard", () -> new KeyboardItem(BlockRegistry.KEYBOARD_BLOCK.get(), new Item.Properties()/*.tab(WebDisplays.CREATIVE_TAB)*/));
     public static final RegistryObject<Item> REDSTONE_CONTROLLER = ITEMS.register("redctrl", () -> new BlockItem(BlockRegistry.REDSTONE_CONTROL_BLOCK.get(), new Item.Properties()/*.tab(WebDisplays.CREATIVE_TAB)*/));

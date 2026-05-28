@@ -1,0 +1,52 @@
+{
+  "multipart": [
+    {
+      "when": { "mount": "north" },
+      "apply": { "model": "webdisplays:block/led_panel_2" }
+    },
+    {
+      "when": { "mount": "south" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "y": 180 }
+    },
+    {
+      "when": { "mount": "east" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "y": 90 }
+    },
+    {
+      "when": { "mount": "west" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "y": 270 }
+    },
+    {
+      "when": { "mount": "up", "facing": "north" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "x": 90 }
+    },
+    {
+      "when": { "mount": "up", "facing": "east" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "x": 90, "y": 90 }
+    },
+    {
+      "when": { "mount": "up", "facing": "south" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "x": 90, "y": 180 }
+    },
+    {
+      "when": { "mount": "up", "facing": "west" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "x": 90, "y": 270 }
+    },
+    {
+      "when": { "mount": "down", "facing": "north" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "x": 270 }
+    },
+    {
+      "when": { "mount": "down", "facing": "east" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "x": 270, "y": 90 }
+    },
+    {
+      "when": { "mount": "down", "facing": "south" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "x": 270, "y": 180 }
+    },
+    {
+      "when": { "mount": "down", "facing": "west" },
+      "apply": { "model": "webdisplays:block/led_panel_2", "x": 270, "y": 270 }
+    }
+  ]
+}

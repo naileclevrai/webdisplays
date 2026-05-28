@@ -48,47 +48,30 @@ import net.montoyo.wd.utilities.serialization.Util;
 import org.jetbrains.annotations.NotNull;
 
 public class ScreenBlock extends BaseEntityBlock {
-    public enum ShapeCategory {
-        FULL,
-        HALF,
-        TRIANGLE
-    }
-
     public static final BooleanProperty hasTE = BooleanProperty.create("haste");
     public static final BooleanProperty emitting = BooleanProperty.create("emitting");
     public static final net.minecraft.world.level.block.state.properties.EnumProperty<ScreenPieceType> piece = ScreenPieceType.PROPERTY;
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final Property<?>[] properties = new Property<?>[]{hasTE, emitting, piece, FACING};
 
-    private final ShapeCategory shapeCategory;
-
     public ScreenBlock(Properties properties) {
-        this(properties, ShapeCategory.FULL, ScreenPieceType.FULL);
-    }
-
-    public ScreenBlock(Properties properties, ShapeCategory shapeCategory, ScreenPieceType defaultPiece) {
         super(properties.strength(1.5f, 10.f));
-        this.shapeCategory = shapeCategory;
         this.registerDefaultState(this.defaultBlockState()
                 .setValue(hasTE, false)
                 .setValue(emitting, false)
-                .setValue(piece, defaultPiece)
+                .setValue(piece, ScreenPieceType.FULL)
                 .setValue(FACING, Direction.NORTH));
     }
 
-    public ShapeCategory getShapeCategory() {
-        return shapeCategory;
+    /** Panneaux plats (ex. LED Panel 2) : pas d'escalier diagonal ni de coins courbes. */
+    public boolean isFlatPanel() {
+        return false;
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
         BlockState state = defaultBlockState();
-        ScreenPieceType placedPiece = switch (shapeCategory) {
-            case HALF -> ScreenPieceType.pickHalfFromYaw(ctx.getRotation());
-            case TRIANGLE -> ScreenPieceType.pickTriangleFromYaw(ctx.getRotation());
-            default -> ScreenPieceType.FULL;
-        };
-        return state.setValue(piece, placedPiece)
+        return state.setValue(piece, ScreenPieceType.FULL)
                 .setValue(FACING, ctx.getHorizontalDirection().getOpposite());
     }
 
@@ -218,6 +201,12 @@ public class ScreenBlock extends BaseEntityBlock {
         } else {
             size = Multiblock.measure(world, shapePos, side);
         }
+
+        if (te == null || te.getScreen(side) == null) {
+            if (net.montoyo.wd.utilities.link.DiagonalStaircaseHelper.tryActivate(world, position, side, player))
+                return InteractionResult.SUCCESS;
+        }
+
         if (size.x < 2 && size.y < 2) {
             Util.toast(player, "tooSmall");
             return InteractionResult.SUCCESS;

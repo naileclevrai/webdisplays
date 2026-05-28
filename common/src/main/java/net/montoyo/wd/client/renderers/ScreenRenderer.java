@@ -23,6 +23,7 @@ import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.utilities.ScreenShape;
+import net.montoyo.wd.utilities.link.DiagonalCornerHelper;
 import net.montoyo.wd.utilities.link.LinkedScreenHelper;
 import net.montoyo.wd.utilities.data.ScreenPieceType;
 import net.montoyo.wd.utilities.data.ScreenShapeMode;
@@ -104,6 +105,66 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 			case TRIANGLE_SE -> addTriangle(builder, poseStack, z, x1, y0, u1, v1, x1, y1, u1, v0, x0, y0, u0, v1);
 			case TRIANGLE_NW -> addTriangle(builder, poseStack, z, x0, y1, u0, v0, x0, y0, u0, v1, x1, y1, u1, v0);
 			case TRIANGLE_NE -> addTriangle(builder, poseStack, z, x1, y1, u1, v0, x0, y1, u0, v0, x1, y0, u1, v1);
+		}
+	}
+
+	private static final int CURVE_STEPS = 6;
+	private static final float CURVE_RADIUS = 0.42f;
+
+	private static boolean isCurvedSubcellVisible(float fx, float fy, boolean tl, boolean tr, boolean bl, boolean br) {
+		float r2 = CURVE_RADIUS * CURVE_RADIUS;
+		if (tr && dist2(fx, fy, 1f, 1f) < r2)
+			return false;
+		if (br && dist2(fx, fy, 1f, 0f) < r2)
+			return false;
+		if (tl && dist2(fx, fy, 0f, 1f) < r2)
+			return false;
+		if (bl && dist2(fx, fy, 0f, 0f) < r2)
+			return false;
+		return true;
+	}
+
+	private static float dist2(float x1, float y1, float x2, float y2) {
+		float dx = x1 - x2;
+		float dy = y1 - y2;
+		return dx * dx + dy * dy;
+	}
+
+	private static void renderScreenCellCurved(BufferBuilder builder, PoseStack poseStack, ScreenPieceType piece, float z,
+	                                           float x0, float x1, float y0, float y1,
+	                                           float u0, float u1, float v0, float v1,
+	                                           int edgeMask, int cellX, int cellY, int sizeX, int sizeY) {
+		boolean roundTR = (edgeMask & DiagonalCornerHelper.ROUND_TR) != 0 && cellX == sizeX - 1 && cellY == sizeY - 1;
+		boolean roundTL = (edgeMask & DiagonalCornerHelper.ROUND_TL) != 0 && cellX == 0 && cellY == sizeY - 1;
+		boolean roundBR = (edgeMask & DiagonalCornerHelper.ROUND_BR) != 0 && cellX == sizeX - 1 && cellY == 0;
+		boolean roundBL = (edgeMask & DiagonalCornerHelper.ROUND_BL) != 0 && cellX == 0 && cellY == 0;
+
+		if (!roundTR && !roundBR && !roundTL && !roundBL) {
+			renderScreenCell(builder, poseStack, piece, z, x0, x1, y0, y1, u0, u1, v0, v1);
+			return;
+		}
+
+		for (int sy = 0; sy < CURVE_STEPS; sy++) {
+			for (int sx = 0; sx < CURVE_STEPS; sx++) {
+				float fx0 = (float) sx / CURVE_STEPS;
+				float fx1 = (float) (sx + 1) / CURVE_STEPS;
+				float fy0 = (float) sy / CURVE_STEPS;
+				float fy1 = (float) (sy + 1) / CURVE_STEPS;
+				float cx = (fx0 + fx1) * 0.5f;
+				float cy = (fy0 + fy1) * 0.5f;
+				if (!isCurvedSubcellVisible(cx, cy, roundTL, roundTR, roundBL, roundBR))
+					continue;
+
+				float lx0 = x0 + (x1 - x0) * fx0;
+				float lx1 = x0 + (x1 - x0) * fx1;
+				float ly0 = y0 + (y1 - y0) * fy0;
+				float ly1 = y0 + (y1 - y0) * fy1;
+				float lu0 = u0 + (u1 - u0) * fx0;
+				float lu1 = u0 + (u1 - u0) * fx1;
+				float lv0 = v0 + (v1 - v0) * fy0;
+				float lv1 = v0 + (v1 - v0) * fy1;
+				renderScreenCell(builder, poseStack, piece, z, lx0, lx1, ly0, ly1, lu0, lu1, lv0, lv1);
+			}
 		}
 	}
 
@@ -270,10 +331,23 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 					}
 				}
 			}
+			ScreenShapeMode renderShapeMode = scr.shapeMode;
+			int curvedEdgeMask = 0;
+			if (group != null && group.getOrigin() != null && group.getOrigin().screen != null)
+				renderShapeMode = group.getOrigin().screen.shapeMode;
+			if (groupEntry != null)
+				curvedEdgeMask = groupEntry.curvedEdgeMask;
+			boolean flatPanel = te.getBlockState().getBlock() instanceof net.montoyo.wd.block.ScreenBlock sb && sb.isFlatPanel();
+			if (flatPanel)
+				curvedEdgeMask = 0;
 			if (groupEntry != null)
 				groupOffset.set(groupEntry.offset.x, groupEntry.offset.y, 0);
+			boolean diagonalLayout = group != null && group.isDiagonalLayout();
+			if (diagonalLayout)
+				curvedEdgeMask = 0;
 			float invWidth = 1.0f / Math.max(1, groupSize.x);
 			float invHeight = 1.0f / Math.max(1, groupSize.y);
+			float[] diagUv = new float[4];
 
 			Tesselator tesselator = Tesselator.getInstance();
 			BufferBuilder builder = tesselator.getBuilder();
@@ -506,7 +580,9 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 			if (showTestPattern) {
 				Vector2i patternOffset = groupEntry != null ? groupEntry.offset : new Vector2i();
 				ScreenTestPatternRenderer.render(poseStack, tesselator, builder, shape, scr, sw, sh, unitX, unitY,
-						patternOffset, bufferSource, Minecraft.getInstance().font, packedLight);
+						patternOffset, bufferSource, Minecraft.getInstance().font, packedLight,
+						renderShapeMode, curvedEdgeMask, diagonalLayout, groupEntry,
+						new Vector2i(groupSize.x, groupSize.y));
 			} else {
 			RenderSystem._setShaderTexture(0, ((MCEFBrowser) scr.browser).getRenderer().getTextureID());
 			RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -520,12 +596,28 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 					float x1 = x0 + unitX;
 					float y0 = -sh + unitY * y;
 					float y1 = y0 + unitY;
-					float u0 = (groupOffset.x + x) * invWidth;
-					float u1 = (groupOffset.x + x + 1) * invWidth;
-					float v0 = 1.0f - (groupOffset.y + y + 1) * invHeight;
-					float v1 = 1.0f - (groupOffset.y + y) * invHeight;
+					float u0;
+					float u1;
+					float v0;
+					float v1;
+					if (diagonalLayout && groupEntry != null) {
+						DiagonalCornerHelper.mapDiagonalCellUv(groupEntry.chainIndex, scr.size.x, scr.size.y, x, y,
+								groupSize.x, groupSize.y, diagUv);
+						u0 = diagUv[0];
+						u1 = diagUv[1];
+						v0 = diagUv[2];
+						v1 = diagUv[3];
+					} else {
+						u0 = (groupOffset.x + x) * invWidth;
+						u1 = (groupOffset.x + x + 1) * invWidth;
+						v0 = 1.0f - (groupOffset.y + y + 1) * invHeight;
+						v1 = 1.0f - (groupOffset.y + y) * invHeight;
+					}
 
-					renderScreenCell(builder, poseStack, shape.getPiece(x, y), 0.505f, x0, x1, y0, y1, u0, u1, v0, v1);
+					if (curvedEdgeMask != 0)
+						renderScreenCellCurved(builder, poseStack, shape.getPiece(x, y), 0.505f, x0, x1, y0, y1, u0, u1, v0, v1, curvedEdgeMask, x, y, scr.size.x, scr.size.y);
+					else
+						renderScreenCell(builder, poseStack, shape.getPiece(x, y), 0.505f, x0, x1, y0, y1, u0, u1, v0, v1);
 				}
 			}
 			tesselator.end();

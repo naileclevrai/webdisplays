@@ -47,14 +47,18 @@ public class ScreenBaker implements BakedModel {
 	IntegerModelProperty[] TEXTURES = new IntegerModelProperty[6];
 	
 	public ScreenBaker(ModelState modelState, Function<net.minecraft.client.resources.model.Material, TextureAtlasSprite> spriteGetter, ItemOverrides overrides, ItemTransforms itemTransforms, ScreenPieceType defaultPiece) {
+		this(modelState, spriteGetter, overrides, itemTransforms, defaultPiece, ScreenModelLoader.MATERIALS_SIDES);
+	}
+
+	public ScreenBaker(ModelState modelState, Function<net.minecraft.client.resources.model.Material, TextureAtlasSprite> spriteGetter, ItemOverrides overrides, ItemTransforms itemTransforms, ScreenPieceType defaultPiece, net.minecraft.client.resources.model.Material[] materials) {
 		this.modelState = modelState;
 		this.spriteGetter = spriteGetter;
 		this.overrides = overrides;
 		this.itemTransforms = itemTransforms;
 		this.defaultPiece = defaultPiece;
-		
+
 		for (int i = 0; i < texs.length; i++) {
-			texs[i] = spriteGetter.apply(ScreenModelLoader.MATERIALS_SIDES[i]);
+			texs[i] = spriteGetter.apply(materials[i]);
 		}
 		
 		for (int i = 0; i < TEXTURES.length; i++) {

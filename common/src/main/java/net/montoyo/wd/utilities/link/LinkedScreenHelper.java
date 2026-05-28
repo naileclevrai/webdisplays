@@ -14,6 +14,7 @@ import net.montoyo.wd.net.WDNetworkRegistry;
 import net.montoyo.wd.net.client_bound.S2CMessageScreenUpdate;
 import net.montoyo.wd.utilities.data.BlockSide;
 import net.montoyo.wd.utilities.data.Rotation;
+import net.montoyo.wd.utilities.data.ScreenShapeMode;
 import net.montoyo.wd.utilities.math.Vector2i;
 
 /**
@@ -88,6 +89,10 @@ public final class LinkedScreenHelper {
 
     public static boolean isLinkedSlave(ScreenData scr) {
         return scr != null && scr.isLinked() && !scr.linkOrigin;
+    }
+
+    public static boolean isDiagonalAutoLink(ScreenData scr) {
+        return DiagonalCornerHelper.isAutoDiagonalLinkId(scr != null ? scr.linkId : null);
     }
 
     public static ScreenData getOriginScreen(ClientProxy proxy, ScreenBlockEntity be, ScreenData scr) {
@@ -240,6 +245,26 @@ public final class LinkedScreenHelper {
                         }
                     }
                     tes.setChanged();
+                });
+    }
+
+    public static void propagateShapeModeFromOrigin(Level level, ScreenBlockEntity originTe, ScreenData originScr,
+                                                  ScreenShapeMode mode) {
+        if (originTe == null || originScr == null || !originScr.isLinked() || !originScr.linkOrigin)
+            return;
+
+        forEachInGroup(level, originTe.getBlockPos(), originScr.linkId, originScr.side, originScr.rotation,
+                (tes, scr, side) -> {
+                    if (tes == originTe && scr == originScr)
+                        return;
+                    scr.shapeMode = mode;
+                    tes.setChanged();
+                    if (!level.isClientSide) {
+                        WDNetworkRegistry.INSTANCE.send(
+                                PacketDistributor.NEAR.with(() -> net.montoyo.wd.block.PeripheralBlock.point(level, tes.getBlockPos())),
+                                S2CMessageScreenUpdate.shapeMode(tes, side, mode)
+                        );
+                    }
                 });
     }
 

@@ -161,7 +161,9 @@ public class GuiSetURL2 extends WDScreen {
 		cbAutoVolume.setDisabled(isSlave);
 
 		if (lblLinkRole != null) {
-			if (!screen.isLinked())
+			if (LinkedScreenHelper.isDiagonalAutoLink(screen))
+				lblLinkRole.setLabel(I18n.get("webdisplays.gui.seturl.linkrole.diagonal"));
+			else if (!screen.isLinked())
 				lblLinkRole.setLabel(I18n.get("webdisplays.gui.seturl.linkrole.standalone"));
 			else if (screen.linkOrigin)
 				lblLinkRole.setLabel(I18n.get("webdisplays.gui.seturl.linkrole.origin"));
@@ -171,7 +173,9 @@ public class GuiSetURL2 extends WDScreen {
 		}
 
 		if (lblLinkHelp != null) {
-			if (isSlave)
+			if (LinkedScreenHelper.isDiagonalAutoLink(screen))
+				lblLinkHelp.setLabel(I18n.get("webdisplays.gui.seturl.linkhelp.diagonal"));
+			else if (isSlave)
 				lblLinkHelp.setLabel(I18n.get("webdisplays.gui.seturl.linkhelp.slave"));
 			else if (screen.isLinked() && screen.linkOrigin)
 				lblLinkHelp.setLabel(I18n.get("webdisplays.gui.seturl.linkhelp.origin"));
@@ -179,14 +183,18 @@ public class GuiSetURL2 extends WDScreen {
 				lblLinkHelp.setLabel(I18n.get("webdisplays.gui.seturl.linkhelp.standalone"));
 		}
 
+		boolean autoDiagonal = LinkedScreenHelper.isDiagonalAutoLink(screen);
 		if (btnLinkAuto != null)
-			btnLinkAuto.setDisabled(isSlave);
+			btnLinkAuto.setDisabled(isSlave || autoDiagonal);
 		if (btnLink != null)
-			btnLink.setDisabled(isSlave);
+			btnLink.setDisabled(isSlave || autoDiagonal);
 		if (btnLinkMode != null)
-			btnLinkMode.setDisabled(isSlave);
-		if (tfLinkId != null)
-			tfLinkId.setDisabled(isSlave);
+			btnLinkMode.setDisabled(isSlave || autoDiagonal);
+		if (tfLinkId != null) {
+			tfLinkId.setDisabled(isSlave || autoDiagonal);
+			if (autoDiagonal)
+				tfLinkId.setText("");
+		}
 	}
 
 	private void updateTestPatternButton(ScreenData screen) {
@@ -365,6 +373,7 @@ public class GuiSetURL2 extends WDScreen {
 						));
 					}
 
+					if (!LinkedScreenHelper.isDiagonalAutoLink(screen)) {
 					String newId = tfLinkId != null ? tfLinkId.getText().trim() : "";
 					boolean shouldLink = linkDesired && !newId.isEmpty();
 					boolean hasOther = hasLinkedScreen(newId);
@@ -382,6 +391,7 @@ public class GuiSetURL2 extends WDScreen {
 							screenSide,
 							new ScreenLinkControl(newId, linkMode, newOrigin)
 						));
+					}
 					}
 				}
 			}

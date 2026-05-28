@@ -11,6 +11,7 @@ import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.utilities.ScreenShape;
 import net.montoyo.wd.utilities.data.BlockSide;
+import net.montoyo.wd.utilities.link.DiagonalCornerHelper;
 import net.montoyo.wd.utilities.data.Rotation;
 import net.montoyo.wd.utilities.data.ScreenLinkMode;
 import net.montoyo.wd.utilities.math.Vector2i;
@@ -29,7 +30,10 @@ public final class LinkedScreenGroup {
         public final ScreenData screen;
         public int rawX;
         public int rawY;
+        public int chainIndex;
         public final Vector2i offset = new Vector2i();
+        /** {@link DiagonalCornerHelper#ROUND_TL} / {@link DiagonalCornerHelper#ROUND_TR} aux joints */
+        public int curvedEdgeMask;
 
         private Entry(ScreenBlockEntity blockEntity, ScreenData screen) {
             this.blockEntity = blockEntity;
@@ -45,6 +49,7 @@ public final class LinkedScreenGroup {
     private Vector2i size = new Vector2i(1, 1);
     private Vector2i resolution = new Vector2i(1, 1);
     private Vector2i effectiveResolution = new Vector2i(1, 1);
+    private boolean diagonalLayout;
     private int lastBrowserWidth = -1;
     private int lastBrowserHeight = -1;
     private boolean needsBrowserSync = true;
@@ -90,10 +95,20 @@ public final class LinkedScreenGroup {
             entry.rawY = shapeOrigin.x * side.up.x + shapeOrigin.y * side.up.y + shapeOrigin.z * side.up.z;
         }
 
-        if (mode == ScreenLinkMode.SPACED) {
-            computeSpacedLayout();
+        if (DiagonalCornerHelper.isDiagonalChain(entries, side)) {
+            DiagonalCornerHelper.applyDiagonalLayout(entries, side);
+            size = new Vector2i(
+                    DiagonalCornerHelper.diagonalCanvasWidth(entries),
+                    DiagonalCornerHelper.diagonalCanvasHeight(entries)
+            );
+            diagonalLayout = true;
         } else {
-            computeJoinedLayout();
+            diagonalLayout = false;
+            if (mode == ScreenLinkMode.SPACED) {
+                computeSpacedLayout();
+            } else {
+                computeJoinedLayout();
+            }
         }
 
         computeResolution();
@@ -110,6 +125,10 @@ public final class LinkedScreenGroup {
 
     public Vector2i getSize() {
         return size;
+    }
+
+    public boolean isDiagonalLayout() {
+        return diagonalLayout;
     }
 
     public Vector2i getResolution() {

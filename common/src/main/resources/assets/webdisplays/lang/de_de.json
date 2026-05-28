@@ -1,8 +1,7 @@
 {
   "itemGroup.webdisplays": "§5Web Displays",
   "block.webdisplays.screen": "Web-Bildschirm",
-  "block.webdisplays.screen_half": "Halber Web-Bildschirm",
-  "block.webdisplays.screen_triangle": "Dreieckiger Web-Bildschirm",
+  "block.webdisplays.led_panel_2": "LED Panel 2",
   "block.webdisplays.peripheral": "Peripheriegerät",
   "block.webdisplays.kb_left": "Tastatur",
   "block.webdisplays.rctrl": "Fernbedienung",
@@ -84,6 +83,7 @@
   "webdisplays.gui.screencfg.shapemode.none": "Keine Anpassung",
   "webdisplays.gui.screencfg.shapemode.smooth_one": "Glatt (1 Block)",
   "webdisplays.gui.screencfg.shapemode.smooth_long": "Glatt (volle Länge)",
+  "webdisplays.gui.screencfg.shapemode.curved_corner": "Abgerundete Ecke (45°)",
   "webdisplays.gui.screencfg.autovol": "Auto-Lautstärke",
   "webdisplays.gui.screencfg.avwarning": "§cVorsicht!\nAuto-Lautstärke funktioniert nur bei YouTube-\nVideos und wenn es in der Client-Konfiguration aktiviert ist!",
   "webdisplays.gui.screencfg.volume": "Lautstärke:",

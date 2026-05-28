@@ -483,12 +483,16 @@ public class ScreenBlockEntity extends BlockEntity {
 
                         double nx = localResX > 0 ? vec.x / (double) localResX : 0.0;
                         double ny = localResY > 0 ? vec.y / (double) localResY : 0.0;
-                        double gx = entry.offset.x + nx * scr.size.x;
-                        double gy = entry.offset.y + ny * scr.size.y;
-
-                        int baseX = groupSize.x > 0 ? (int) Math.round(gx / groupSize.x * groupResX) : vec.x;
-                        int baseY = groupSize.y > 0 ? (int) Math.round(gy / groupSize.y * groupResY) : vec.y;
-                        Vector2i groupPos = new Vector2i(baseX, baseY);
+                        Vector2i groupPos = new Vector2i();
+                        if (group.isDiagonalLayout()) {
+                            net.montoyo.wd.utilities.link.DiagonalCornerHelper.mapDiagonalHitToGroup(entry.chainIndex, scr.size.x, scr.size.y,
+                                    nx, ny, groupSize.x, groupSize.y, groupRes, groupPos);
+                        } else {
+                            double gx = entry.offset.x + nx * scr.size.x;
+                            double gy = entry.offset.y + ny * scr.size.y;
+                            groupPos.x = groupSize.x > 0 ? (int) Math.round(gx / groupSize.x * groupResX) : vec.x;
+                            groupPos.y = groupSize.y > 0 ? (int) Math.round(gy / groupSize.y * groupResY) : vec.y;
+                        }
                         scaled = group.scaleInputToEffective(groupPos, scr.rotation, null);
                     } else {
                         scaled = scr.scaleInputToEffective(vec, null);
@@ -1175,12 +1179,28 @@ public class ScreenBlockEntity extends BlockEntity {
             return;
         }
 
+        if (net.montoyo.wd.utilities.link.LinkedScreenHelper.isLinkedSlave(scr)) {
+            Log.warning("Blocked shape mode change on linked slave at %s (%s)", getBlockPos(), side);
+            return;
+        }
+
+        if (getBlockState().getBlock() instanceof net.montoyo.wd.block.ScreenBlock sb && sb.isFlatPanel()
+                && mode == ScreenShapeMode.CURVED_CORNER) {
+            mode = ScreenShapeMode.NONE;
+        }
+
         if (level.isClientSide) {
             scr.shapeMode = mode;
             WebDisplays.PROXY.screenUpdateShapeModeInGui(new Vector3i(getBlockPos()), side, mode);
+            if (scr.isLinked() && scr.linkOrigin)
+                net.montoyo.wd.utilities.link.LinkedScreenHelper.propagateShapeModeFromOrigin(level, this, scr, mode);
+            if (net.montoyo.wd.WebDisplays.PROXY instanceof net.montoyo.wd.client.ClientProxy proxy)
+                proxy.notifyLinkChanged();
         } else {
             scr.shapeMode = mode;
             WDNetworkRegistry.INSTANCE.send(PacketDistributor.NEAR.with(() -> point(level, getBlockPos())), S2CMessageScreenUpdate.shapeMode(this, side, mode));
+            if (scr.isLinked() && scr.linkOrigin)
+                net.montoyo.wd.utilities.link.LinkedScreenHelper.propagateShapeModeFromOrigin(level, this, scr, mode);
             setChanged();
         }
     }

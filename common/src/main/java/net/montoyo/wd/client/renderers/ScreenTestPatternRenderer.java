@@ -8,9 +8,12 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.util.FormattedCharSequence;
+import net.montoyo.wd.client.link.LinkedScreenGroup;
 import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.utilities.ScreenShape;
 import net.montoyo.wd.utilities.data.ScreenPieceType;
+import net.montoyo.wd.utilities.data.ScreenShapeMode;
+import net.montoyo.wd.utilities.link.DiagonalCornerHelper;
 import net.montoyo.wd.utilities.math.Vector2i;
 
 /**
@@ -20,6 +23,8 @@ public final class ScreenTestPatternRenderer {
     private static final float[] BAR_R = {1f, 1f, 0f, 0f, 0f, 1f, 1f};
     private static final float[] BAR_G = {0f, 1f, 1f, 1f, 0f, 0f, 1f};
     private static final float[] BAR_B = {0f, 0f, 0f, 1f, 1f, 1f, 1f};
+    private static final int CURVE_STEPS = 6;
+    private static final float CURVE_RADIUS = 0.42f;
 
     private ScreenTestPatternRenderer() {
     }
@@ -27,7 +32,9 @@ public final class ScreenTestPatternRenderer {
     public static void render(PoseStack poseStack, Tesselator tesselator, BufferBuilder builder,
                               ScreenShape.Data shape, ScreenData scr, float sw, float sh,
                               float unitX, float unitY, Vector2i groupOffset,
-                              MultiBufferSource bufferSource, Font font, int packedLight) {
+                              MultiBufferSource bufferSource, Font font, int packedLight,
+                              ScreenShapeMode renderShapeMode, int curvedEdgeMask,
+                              boolean diagonalLayout, LinkedScreenGroup.Entry groupEntry, Vector2i groupSize) {
         long time = System.currentTimeMillis();
         float scanY = (time % 4000L) / 4000f;
         float faceW = sw * 2f;
@@ -46,23 +53,31 @@ public final class ScreenTestPatternRenderer {
                 float y0 = -sh + unitY * y;
                 float y1 = y0 + unitY;
 
-                renderCellPattern(builder, poseStack, shape.getPiece(x, y), 0.505f,
-                        x0, x1, y0, y1, sw, sh, faceW, faceH, scanY);
+                if (curvedEdgeMask != 0)
+                    renderCellPatternCurved(builder, poseStack, shape.getPiece(x, y), 0.505f,
+                            x0, x1, y0, y1, sw, sh, faceW, faceH, scanY, curvedEdgeMask, x, y, scr.size.x, scr.size.y,
+                            diagonalLayout, groupEntry, groupSize, x, y);
+                else
+                    renderCellPattern(builder, poseStack, shape.getPiece(x, y), 0.505f,
+                            x0, x1, y0, y1, sw, sh, faceW, faceH, scanY,
+                            diagonalLayout, groupEntry, groupSize, x, y);
             }
         }
         tesselator.end();
 
-        // Crosshair + circle overlay
         builder.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
-        drawCrosshair(builder, poseStack, 0.506f, sw, sh);
+        if (!diagonalLayout)
+            drawCrosshair(builder, poseStack, 0.506f, sw, sh);
         tesselator.end();
 
-        drawLabels(poseStack, bufferSource, font, packedLight, scr, sw, sh, groupOffset);
+        drawLabels(poseStack, bufferSource, font, packedLight, scr, sw, sh, groupOffset, diagonalLayout);
     }
 
     private static void renderCellPattern(BufferBuilder builder, PoseStack poseStack, ScreenPieceType piece,
                                           float z, float x0, float x1, float y0, float y1,
-                                          float sw, float sh, float faceW, float faceH, float scanY) {
+                                          float sw, float sh, float faceW, float faceH, float scanY,
+                                          boolean diagonalLayout, LinkedScreenGroup.Entry groupEntry, Vector2i groupSize,
+                                          int cellX, int cellY) {
         int steps = 4;
         for (int sy = 0; sy < steps; sy++) {
             for (int sx = 0; sx < steps; sx++) {
@@ -71,15 +86,84 @@ public final class ScreenTestPatternRenderer {
                 float ly0 = y0 + (y1 - y0) * sy / steps;
                 float ly1 = y0 + (y1 - y0) * (sy + 1) / steps;
 
-                float nx = (lx0 + lx1) * 0.5f + sw;
-                float ny = (ly0 + ly1) * 0.5f + sh;
-                nx /= faceW;
-                ny /= faceH;
+                float nx;
+                float ny;
+                if (diagonalLayout && groupEntry != null && groupSize != null) {
+                    float subX = ((lx0 + lx1) * 0.5f + sw) / faceW * Math.max(1, groupEntry.screen.size.x);
+                    float subY = ((ly0 + ly1) * 0.5f + sh) / faceH * Math.max(1, groupEntry.screen.size.y);
+                    float gx = DiagonalCornerHelper.diagonalGlobalX(groupEntry.chainIndex, groupEntry.screen.size.x,
+                            cellX, cellY, groupEntry.screen.size.y) + (subX - cellX);
+                    float gy = cellY + (subY - cellY);
+                    nx = gx / Math.max(1, groupSize.x);
+                    ny = gy / Math.max(1, groupSize.y);
+                } else {
+                    nx = (lx0 + lx1) * 0.5f + sw;
+                    ny = (ly0 + ly1) * 0.5f + sh;
+                    nx /= faceW;
+                    ny /= faceH;
+                }
 
                 float[] rgb = samplePattern(nx, ny, scanY);
                 addColorCell(builder, poseStack, piece, z, lx0, lx1, ly0, ly1, rgb[0], rgb[1], rgb[2]);
             }
         }
+    }
+
+    private static void renderCellPatternCurved(BufferBuilder builder, PoseStack poseStack, ScreenPieceType piece,
+                                                float z, float x0, float x1, float y0, float y1,
+                                                float sw, float sh, float faceW, float faceH, float scanY,
+                                                int edgeMask, int cellX, int cellY, int sizeX, int sizeY,
+                                                boolean diagonalLayout, LinkedScreenGroup.Entry groupEntry,
+                                                Vector2i groupSize, int gridX, int gridY) {
+        boolean roundTR = (edgeMask & DiagonalCornerHelper.ROUND_TR) != 0 && cellX == sizeX - 1 && cellY == sizeY - 1;
+        boolean roundTL = (edgeMask & DiagonalCornerHelper.ROUND_TL) != 0 && cellX == 0 && cellY == sizeY - 1;
+        boolean roundBR = (edgeMask & DiagonalCornerHelper.ROUND_BR) != 0 && cellX == sizeX - 1 && cellY == 0;
+        boolean roundBL = (edgeMask & DiagonalCornerHelper.ROUND_BL) != 0 && cellX == 0 && cellY == 0;
+
+        if (!roundTR && !roundTL && !roundBR && !roundBL) {
+            renderCellPattern(builder, poseStack, piece, z, x0, x1, y0, y1, sw, sh, faceW, faceH, scanY,
+                    diagonalLayout, groupEntry, groupSize, gridX, gridY);
+            return;
+        }
+
+        for (int sy = 0; sy < CURVE_STEPS; sy++) {
+            for (int sx = 0; sx < CURVE_STEPS; sx++) {
+                float fx0 = (float) sx / CURVE_STEPS;
+                float fx1 = (float) (sx + 1) / CURVE_STEPS;
+                float fy0 = (float) sy / CURVE_STEPS;
+                float fy1 = (float) (sy + 1) / CURVE_STEPS;
+                float cx = (fx0 + fx1) * 0.5f;
+                float cy = (fy0 + fy1) * 0.5f;
+                if (!isCurvedSubcellVisible(cx, cy, roundTL, roundTR, roundBL, roundBR))
+                    continue;
+
+                float lx0 = x0 + (x1 - x0) * fx0;
+                float lx1 = x0 + (x1 - x0) * fx1;
+                float ly0 = y0 + (y1 - y0) * fy0;
+                float ly1 = y0 + (y1 - y0) * fy1;
+                renderCellPattern(builder, poseStack, piece, z, lx0, lx1, ly0, ly1, sw, sh, faceW, faceH, scanY,
+                        diagonalLayout, groupEntry, groupSize, gridX, gridY);
+            }
+        }
+    }
+
+    private static boolean isCurvedSubcellVisible(float fx, float fy, boolean tl, boolean tr, boolean bl, boolean br) {
+        float r2 = CURVE_RADIUS * CURVE_RADIUS;
+        if (tr && dist2(fx, fy, 1f, 1f) < r2)
+            return false;
+        if (br && dist2(fx, fy, 1f, 0f) < r2)
+            return false;
+        if (tl && dist2(fx, fy, 0f, 1f) < r2)
+            return false;
+        if (bl && dist2(fx, fy, 0f, 0f) < r2)
+            return false;
+        return true;
+    }
+
+    private static float dist2(float x1, float y1, float x2, float y2) {
+        float dx = x1 - x2;
+        float dy = y1 - y2;
+        return dx * dx + dy * dy;
     }
 
     private static float[] samplePattern(float nx, float ny, float scanY) {
@@ -95,7 +179,6 @@ public final class ScreenTestPatternRenderer {
             float gray = 1f - ny;
             r = g = b = gray;
         } else if (nx < 0.16f && ny > 0.84f) {
-            // Top-left wedge (brightness ramp)
             float t = (nx / 0.16f + (1f - ny) / 0.16f) * 0.5f;
             r = g = b = t;
         } else {
@@ -118,12 +201,9 @@ public final class ScreenTestPatternRenderer {
         float t = Math.min(sw, sh) * 0.004f;
         float cr = 0.85f, cg = 0.85f, cb = 0.85f;
 
-        // Horizontal line
         addColorQuad(builder, poseStack, z, -sw, -t, sw, t, cr, cg, cb);
-        // Vertical line
         addColorQuad(builder, poseStack, z, -t, -sh, t, sh, cr, cg, cb);
 
-        // Circle approximation (octagon)
         float radius = Math.min(sw, sh) * 0.55f;
         int segments = 32;
         for (int i = 0; i < segments; i++) {
@@ -140,19 +220,25 @@ public final class ScreenTestPatternRenderer {
     }
 
     private static void drawLabels(PoseStack poseStack, MultiBufferSource bufferSource, Font font,
-                                 int packedLight, ScreenData scr, float sw, float sh, Vector2i groupOffset) {
+                                 int packedLight, ScreenData scr, float sw, float sh, Vector2i groupOffset,
+                                 boolean diagonalLayout) {
         String role;
         if (scr.isLinked()) {
-            role = scr.linkOrigin
-                    ? I18n.get("webdisplays.testpattern.role.master")
-                    : I18n.get("webdisplays.testpattern.role.slave");
+            if (diagonalLayout)
+                role = scr.linkOrigin
+                        ? I18n.get("webdisplays.testpattern.role.diagonal.master")
+                        : I18n.get("webdisplays.testpattern.role.diagonal.slave");
+            else
+                role = scr.linkOrigin
+                        ? I18n.get("webdisplays.testpattern.role.master")
+                        : I18n.get("webdisplays.testpattern.role.slave");
         } else {
             role = I18n.get("webdisplays.testpattern.role.screen");
         }
 
         String resolution = scr.resolution.x + " x " + scr.resolution.y;
         String blocks = I18n.get("webdisplays.testpattern.blocks", scr.size.x, scr.size.y);
-        String offset = (scr.isLinked() && groupOffset != null)
+        String offset = (scr.isLinked() && groupOffset != null && !diagonalLayout)
                 ? "@" + groupOffset.x + "," + groupOffset.y
                 : null;
 
@@ -188,9 +274,7 @@ public final class ScreenTestPatternRenderer {
                                    float z, float x0, float x1, float y0, float y1,
                                    float r, float g, float b) {
         switch (piece) {
-            case FULL -> {
-                addColorQuad(builder, poseStack, z, x0, y0, x1, y1, r, g, b);
-            }
+            case FULL -> addColorQuad(builder, poseStack, z, x0, y0, x1, y1, r, g, b);
             case HALF_BOTTOM -> {
                 float ym = (y0 + y1) * 0.5f;
                 addColorTriangle(builder, poseStack, z, x0, y0, x1, y0, x1, ym, r, g, b);
